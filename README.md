@@ -1,80 +1,65 @@
 # MuSync MVP
 
-MVP for a focus music web app with account login, focus sessions, and prompt-based background track generation.
+Focus music web app: account login (email + Google), focus sessions, prompt-based background track generation.
 
 ## Stack
-- Frontend: Next.js 14 (App Router)
-- Backend API: FastAPI
+- Frontend: Next.js 16 (App Router, RSC + Server Actions) + shadcn/ui + Tailwind + zustand
+- Backend: FastAPI + google-auth (in-memory state for MVP)
 - Containerization: Docker (separate Dockerfile per service)
 
-## Product Behavior
-- Users can sign up and log in from the website
-- Users can create focus sessions with a mood, title, duration, and prompt
-- Users can generate tracks through the backend generation API configured for ACE 1.5
-- Playback can start immediately from the seeded pool while generated tracks accumulate in the user library
+## Routes
+| URL | 描述 |
+|---|---|
+| `/` | Landing |
+| `/login`, `/signup` | Auth (email + Google OAuth) |
+| `/app/dashboard` | 今日專注時數、active session、library 概覽 |
+| `/app/play` | Composer + 大畫面 player |
+| `/app/library` | 已生成的 tracks |
+| `/app/sessions` | Focus session 歷史 |
+| `/app/settings` | Profile / 偏好 |
 
-## Local run (Docker)
-```bash
-docker compose up --build
-```
+Auth 使用 httpOnly cookie；middleware 守 `/app/*`，未登入 → `/login`、已登入打 auth 頁 → `/app/dashboard`。
 
-- Frontend: http://localhost:3000
-- Backend: http://localhost:8000
-- API docs: http://localhost:8000/docs
+## Local run
 
-## Local run (without Docker)
 ### Backend
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+pip install -r requirements-dev.txt
+cp .env.example .env  # 填 GOOGLE_CLIENT_ID
+uvicorn app.main:app --reload --port 8000
 ```
 
 ### Frontend
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local  # 填 NEXT_PUBLIC_GOOGLE_CLIENT_ID
 npm run dev
 ```
 
-Set API base URL if needed:
+## Tests
 ```bash
-NEXT_PUBLIC_API_BASE=http://localhost:8000
+# Backend
+cd backend && python -m pytest tests/ -v
+
+# Frontend unit
+cd frontend && npm test
+
+# Frontend e2e (auto starts backend + frontend)
+cd frontend && npm run e2e
 ```
 
-Environment examples:
-- `frontend/.env.example`
-- `backend/.env.example`
+## Deployment (Zeabur)
+- 兩個 service：`frontend/` 和 `backend/`，各自的 Dockerfile
+- Push to `main` → Zeabur auto build & deploy
+- Frontend env：`NEXT_PUBLIC_APP_URL`、`API_BASE_URL`、`NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+- Backend env：`CORS_ALLOW_ORIGINS`、`GOOGLE_CLIENT_ID`
 
-Recommended MVP stack:
-- Database/Auth/Storage: Supabase
-- Music generation model: ACE 1.5 via backend-only API key
-
-## API overview
-- `POST /api/auth/signup`: create an account
-- `POST /api/auth/login`: log in and receive bearer token
-- `POST /api/auth/logout`: invalidate current token
-- `GET /api/auth/me`: get current user
-- `GET /api/profile`: get user profile
-- `PATCH /api/profile`: update focus preferences
-- `GET /api/catalog/moods`: list supported moods
-- `POST /api/focus-sessions`: create a focus session
-- `GET /api/focus-sessions`: list current user's focus sessions
-- `GET /api/focus-sessions/{session_id}`: fetch one focus session
-- `POST /api/focus-sessions/{session_id}/complete`: complete a focus session
-- `POST /api/play/start`: start playback session with mood + prompt
-- `POST /api/play/next`: fetch next track in playback session
-- `POST /api/generation/jobs`: create a generation job
-- `GET /api/generation/jobs`: list current user's generation jobs
-- `GET /api/generation/jobs/{job_id}`: fetch one generation job
-- `GET /api/library/tracks`: list current user's generated tracks
-- `GET /api/health`: health check and provider config status
-
-## Deployment notes (Zeabur)
-Deploy `frontend` and `backend` as two separate services, each using its own Dockerfile.
-
-- Backend service root: `backend/`
-- Frontend service root: `frontend/`
-- Frontend env: `NEXT_PUBLIC_API_BASE=https://<your-backend-domain>`
+## Google OAuth setup
+1. Google Cloud Console → 建 OAuth 2.0 Client ID（type: Web）
+2. Authorized JavaScript origins: `https://<frontend-domain>` + `http://localhost:3000`
+3. 不需要 Authorized redirect URIs（GIS popup 流程不用）
+4. 同一個 Client ID 同時填到 frontend `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 和 backend `GOOGLE_CLIENT_ID`
