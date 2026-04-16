@@ -245,7 +245,12 @@ git commit -m "chore: 升級 Next 16 + React 19"
 - Modify: `frontend/package.json`
 - Create: `frontend/prettier.config.mjs`
 - Create: `frontend/.prettierignore`
-- Modify: `frontend/.eslintrc.json`（若不存在則 create）
+- Create: `frontend/eslint.config.mjs`
+
+> **Next 16 + ESLint 9 強制要求**（執行時發現，已對齊）：
+> 1. `eslint-config-next@16.x` peer dep 強制 `eslint >= 9.0.0`，所以 eslint 用 `^9.0.0`
+> 2. ESLint 9 + `eslint-config-next@16` 都已不再支援 legacy `.eslintrc.*`，改用 flat config `eslint.config.mjs`
+> 3. Next 16 移除了 `next lint` 子命令，`lint` script 改成直接呼叫 `eslint .`
 
 - [ ] **Step 1: 加 dev deps 進 `frontend/package.json`**
 
@@ -254,7 +259,7 @@ git commit -m "chore: 升級 Next 16 + React 19"
 {
   "prettier": "^3.3.3",
   "prettier-plugin-tailwindcss": "^0.6.6",
-  "eslint": "^8.57.0",
+  "eslint": "^9.0.0",
   "eslint-config-next": "^16.0.0",
   "eslint-plugin-tailwindcss": "^3.17.4",
   "@typescript-eslint/eslint-plugin": "^8.0.0",
@@ -285,21 +290,29 @@ package-lock.json
 *.md
 ```
 
-- [ ] **Step 4: Create/overwrite `frontend/.eslintrc.json`**
+- [ ] **Step 4: Create `frontend/eslint.config.mjs`（flat config）**
 
-```json
-{
-  "extends": ["next/core-web-vitals", "next/typescript", "plugin:tailwindcss/recommended"],
-  "rules": {
-    "tailwindcss/no-custom-classname": "off",
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+```js
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
+import tailwindcss from "eslint-plugin-tailwindcss";
+
+export default [
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  ...tailwindcss.configs["flat/recommended"],
+  {
+    rules: {
+      "tailwindcss/no-custom-classname": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    },
+    settings: {
+      tailwindcss: {
+        callees: ["cn", "clsx"],
+      },
+    },
   },
-  "settings": {
-    "tailwindcss": {
-      "callees": ["cn", "clsx"]
-    }
-  }
-}
+];
 ```
 
 - [ ] **Step 5: 加 npm scripts 到 `frontend/package.json`**
@@ -310,7 +323,7 @@ package-lock.json
   "dev": "next dev",
   "build": "next build",
   "start": "next start",
-  "lint": "next lint",
+  "lint": "eslint .",
   "format": "prettier --write .",
   "format:check": "prettier --check .",
   "typecheck": "tsc --noEmit"
@@ -325,9 +338,10 @@ Expected: 安裝成功
 - [ ] **Step 7: Commit**
 
 ```bash
-git add frontend/package.json frontend/prettier.config.mjs frontend/.prettierignore \
-        frontend/.eslintrc.json
-git commit -m "chore: 加 prettier + eslint-plugin-tailwindcss"
+git add frontend/package.json frontend/package-lock.json \
+        frontend/prettier.config.mjs frontend/.prettierignore \
+        frontend/eslint.config.mjs
+git commit -m "chore: 加 prettier + eslint 9 flat config（對齊 Next 16）"
 ```
 
 ---
