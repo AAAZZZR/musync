@@ -12,13 +12,19 @@ export function LibraryGrid({ tracks }: { tracks: Track[] }) {
         icon={<Music className="h-6 w-6" />}
         title="No tracks yet"
         description="Generate your first track from the Play page."
-        action={<Link href="/app/play"><Button>Open Composer</Button></Link>}
+        action={
+          <Link href="/app/play">
+            <Button>Open Composer</Button>
+          </Link>
+        }
       />
     );
   }
   return (
     <div className="grid gap-3">
-      {tracks.map((t) => <TrackCard key={t.id} track={t} />)}
+      {tracks.map((t) => (
+        <TrackCard key={t.id} track={t} />
+      ))}
     </div>
   );
 }

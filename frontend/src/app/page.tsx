@@ -5,10 +5,16 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen">
       <header className="container flex items-center justify-between py-6">
-        <Link href="/" className="text-lg font-semibold">MuSync</Link>
+        <Link href="/" className="text-lg font-semibold">
+          MuSync
+        </Link>
         <nav className="flex items-center gap-3">
-          <Link href="/login"><Button variant="ghost">Sign in</Button></Link>
-          <Link href="/signup"><Button>Get started</Button></Link>
+          <Link href="/login">
+            <Button variant="ghost">Sign in</Button>
+          </Link>
+          <Link href="/signup">
+            <Button>Get started</Button>
+          </Link>
         </nav>
       </header>
 
@@ -21,16 +27,31 @@ export default function LandingPage() {
           instantly while it generates a personalized track in the background.
         </p>
         <div className="mt-10 flex justify-center gap-3">
-          <Link href="/signup"><Button size="lg">Start a focus session</Button></Link>
-          <Link href="/login"><Button size="lg" variant="outline">I have an account</Button></Link>
+          <Link href="/signup">
+            <Button size="lg">Start a focus session</Button>
+          </Link>
+          <Link href="/login">
+            <Button size="lg" variant="outline">
+              I have an account
+            </Button>
+          </Link>
         </div>
       </section>
 
       <section className="container grid gap-6 py-16 md:grid-cols-3">
         {[
-          { title: "Six moods", body: "Focus, calm, sleep, rainy, happy chill, night drive — each tuned for a different mode." },
-          { title: "Prompt-driven", body: "Add your own prompt to steer instrumentation. No vocals, seamless loops." },
-          { title: "Personal library", body: "Every generation is saved to your library and re-playable across sessions." },
+          {
+            title: "Six moods",
+            body: "Focus, calm, sleep, rainy, happy chill, night drive — each tuned for a different mode.",
+          },
+          {
+            title: "Prompt-driven",
+            body: "Add your own prompt to steer instrumentation. No vocals, seamless loops.",
+          },
+          {
+            title: "Personal library",
+            body: "Every generation is saved to your library and re-playable across sessions.",
+          },
         ].map((f) => (
           <div key={f.title} className="rounded-lg border bg-card p-6">
             <h3 className="text-lg font-semibold">{f.title}</h3>

@@ -8,7 +8,9 @@ export function Sidebar({ user }: { user: User }) {
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-card/40">
       <div className="px-4 py-5">
-        <Link href="/app/dashboard" className="text-lg font-semibold">MuSync</Link>
+        <Link href="/app/dashboard" className="text-lg font-semibold">
+          MuSync
+        </Link>
       </div>
       <nav className="grid gap-1 px-2">
         <SidebarNavItem href="/app/dashboard" icon={LayoutDashboard} label="Dashboard" />

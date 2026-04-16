@@ -3,8 +3,14 @@ import { usePlayerStore } from "@/lib/stores/player-store";
 import type { Track } from "@/types/api";
 
 const track1: Track = {
-  id: "t1", title: "Track 1", mood: "focus", prompt: "p", stream_url: "u1",
-  duration_sec: 180, source: "seed", created_at: "2026-01-01",
+  id: "t1",
+  title: "Track 1",
+  mood: "focus",
+  prompt: "p",
+  stream_url: "u1",
+  duration_sec: 180,
+  source: "seed",
+  created_at: "2026-01-01",
 };
 const track2: Track = { ...track1, id: "t2", title: "Track 2", stream_url: "u2" };
 

@@ -21,7 +21,9 @@ export function SignupForm() {
     <form action={formAction} className="grid gap-5">
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold">Create your account</h1>
-        <p className="text-sm text-muted-foreground">Start your first focus session in under a minute.</p>
+        <p className="text-sm text-muted-foreground">
+          Start your first focus session in under a minute.
+        </p>
       </div>
 
       <div className="grid gap-2">
@@ -42,7 +44,14 @@ export function SignupForm() {
 
       <div className="grid gap-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={8} />
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+        />
         {fieldErrors?.password ? (
           <p className="text-xs text-destructive">{fieldErrors.password[0]}</p>
         ) : null}
@@ -53,7 +62,10 @@ export function SignupForm() {
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already have one? <Link href="/login" className="text-primary hover:underline">Sign in</Link>
+        Already have one?{" "}
+        <Link href="/login" className="text-primary hover:underline">
+          Sign in
+        </Link>
       </p>
     </form>
   );

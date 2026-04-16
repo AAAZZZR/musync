@@ -2,7 +2,12 @@
 
 import { LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { logoutAction } from "@/lib/server/actions/auth";
 import type { User } from "@/types/api";
 
@@ -22,7 +27,11 @@ export function UserMenu({ user }: { user: User }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <form action={async () => { await logoutAction(); }}>
+        <form
+          action={async () => {
+            await logoutAction();
+          }}
+        >
           <DropdownMenuItem asChild>
             <button type="submit" className="flex w-full items-center gap-2">
               <LogOut className="h-4 w-4" /> Sign out

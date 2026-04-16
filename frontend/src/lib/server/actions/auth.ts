@@ -18,10 +18,7 @@ async function setSessionCookie(token: string) {
   (await cookies()).set(TOKEN_COOKIE, token, COOKIE_OPTIONS);
 }
 
-export async function loginAction(
-  _prev: unknown,
-  formData: FormData,
-): Promise<ActionResult<null>> {
+export async function loginAction(_prev: unknown, formData: FormData): Promise<ActionResult<null>> {
   const parsed = loginSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return {

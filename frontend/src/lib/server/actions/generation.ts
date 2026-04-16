@@ -5,9 +5,12 @@ import { serverFetch } from "@/lib/server/api";
 import { generationSchema } from "@/lib/validation/schemas";
 import type { ActionResult, GenerationJob } from "@/types/api";
 
-export async function createGenerationJobAction(
-  input: { mood: string; prompt: string; duration_sec?: number; title?: string },
-): Promise<ActionResult<GenerationJob>> {
+export async function createGenerationJobAction(input: {
+  mood: string;
+  prompt: string;
+  duration_sec?: number;
+  title?: string;
+}): Promise<ActionResult<GenerationJob>> {
   const parsed = generationSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: "Invalid input", fieldErrors: parsed.error.flatten().fieldErrors };

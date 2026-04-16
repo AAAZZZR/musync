@@ -5,8 +5,18 @@ import userEvent from "@testing-library/user-event";
 vi.mock("@/lib/server/actions/generation", () => ({
   createGenerationJobAction: vi.fn(async () => ({
     ok: true,
-    data: { track: { id: "t1", title: "Generated", mood: "focus", prompt: "p", stream_url: "u",
-                     duration_sec: 180, source: "ace-1.5", created_at: "2026-01-01" } },
+    data: {
+      track: {
+        id: "t1",
+        title: "Generated",
+        mood: "focus",
+        prompt: "p",
+        stream_url: "u",
+        duration_sec: 180,
+        source: "ace-1.5",
+        created_at: "2026-01-01",
+      },
+    },
   })),
 }));
 vi.mock("@/lib/server/actions/focus-session", () => ({

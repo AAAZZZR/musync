@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // 自動 mock；redirect 必須 throw 才能模擬 Next 真實行為
 vi.mock("next/navigation", () => ({
-  redirect: vi.fn((path: string) => { throw new Error(`REDIRECT:${path}`); }),
+  redirect: vi.fn((path: string) => {
+    throw new Error(`REDIRECT:${path}`);
+  }),
 }));
 
 const cookieStore = { set: vi.fn(), get: vi.fn(), delete: vi.fn() };
@@ -49,8 +51,9 @@ describe("loginAction", () => {
 
     await expect(loginAction(null, formData)).rejects.toThrow("REDIRECT:/app/dashboard");
     expect(cookieStore.set).toHaveBeenCalledWith(
-      "musync_token", "tok_x",
-      expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/" })
+      "musync_token",
+      "tok_x",
+      expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/" }),
     );
   });
 

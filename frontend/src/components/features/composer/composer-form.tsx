@@ -23,7 +23,10 @@ export function ComposerForm({ moods, defaultMood }: { moods: Mood[]; defaultMoo
   function handleGenerate() {
     startTransition(async () => {
       const r = await createGenerationJobAction({
-        mood, prompt, duration_sec: Math.max(minutes * 60, 180), title,
+        mood,
+        prompt,
+        duration_sec: Math.max(minutes * 60, 180),
+        title,
       });
       if (!r.ok) {
         toast.error(r.error);
@@ -39,7 +42,10 @@ export function ComposerForm({ moods, defaultMood }: { moods: Mood[]; defaultMoo
   function handleStartSession() {
     startTransition(async () => {
       const r = await createFocusSessionAction({
-        title, mood, duration_minutes: minutes, prompt,
+        title,
+        mood,
+        duration_minutes: minutes,
+        prompt,
       });
       if (!r.ok) toast.error(r.error);
       else toast.success(`Focus session "${r.data.title}" started`);
@@ -69,21 +75,38 @@ export function ComposerForm({ moods, defaultMood }: { moods: Mood[]; defaultMoo
         </div>
         <div className="grid gap-2">
           <Label htmlFor="minutes">Minutes</Label>
-          <Input id="minutes" type="number" min={5} max={180} value={minutes}
-                 onChange={(e) => setMinutes(Number(e.target.value))} />
+          <Input
+            id="minutes"
+            type="number"
+            min={5}
+            max={180}
+            value={minutes}
+            onChange={(e) => setMinutes(Number(e.target.value))}
+          />
         </div>
       </div>
 
       <div className="grid gap-2">
         <Label htmlFor="prompt">Prompt</Label>
-        <Textarea id="prompt" value={prompt} maxLength={180}
-                  onChange={(e) => setPrompt(e.target.value)} className="min-h-28" />
+        <Textarea
+          id="prompt"
+          value={prompt}
+          maxLength={180}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="min-h-28"
+        />
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button onClick={handleGenerate} disabled={pending}>Generate music</Button>
-        <Button variant="outline" onClick={handleStartSession} disabled={pending}>Start focus session</Button>
-        <Button variant="outline" onClick={handleStartPlayback} disabled={pending}>Start playback</Button>
+        <Button onClick={handleGenerate} disabled={pending}>
+          Generate music
+        </Button>
+        <Button variant="outline" onClick={handleStartSession} disabled={pending}>
+          Start focus session
+        </Button>
+        <Button variant="outline" onClick={handleStartPlayback} disabled={pending}>
+          Start playback
+        </Button>
       </div>
     </div>
   );

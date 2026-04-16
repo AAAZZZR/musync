@@ -37,7 +37,10 @@ test("signup → play → generate → library → logout", async ({ page }) => 
   await expect(page).toHaveURL(/\/app\/library$/);
 
   // 9. logout via user menu
-  await page.locator("button").filter({ hasText: email.slice(0, 1).toUpperCase() }).click();
+  await page
+    .locator("button")
+    .filter({ hasText: email.slice(0, 1).toUpperCase() })
+    .click();
   await page.getByRole("menuitem", { name: /Sign out/i }).click();
   await expect(page).toHaveURL(/^http:\/\/localhost:3000\/$/);
 });

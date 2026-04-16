@@ -5,19 +5,19 @@
 @layer base {
   :root {
     /* MuSync brand → shadcn */
-    --background: 222 47% 6%;       /* ink */
+    --background: 222 47% 6%; /* ink */
     --foreground: 210 20% 98%;
     --card: 222 47% 9%;
     --card-foreground: 210 20% 98%;
     --popover: 222 47% 9%;
     --popover-foreground: 210 20% 98%;
-    --primary: 152 76% 63%;         /* mint */
+    --primary: 152 76% 63%; /* mint */
     --primary-foreground: 222 47% 6%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 20% 98%;
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
-    --accent: 199 89% 64%;          /* sky */
+    --accent: 199 89% 64%; /* sky */
     --accent-foreground: 222 47% 6%;
     --destructive: 0 73% 60%;
     --destructive-foreground: 210 20% 98%;
@@ -29,6 +29,10 @@
 }
 
 @layer base {
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground antialiased; }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
 }

@@ -9,7 +9,7 @@ export default [
   {
     rules: {
       "tailwindcss/no-custom-classname": "off",
-      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
     settings: {
       tailwindcss: {

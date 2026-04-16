@@ -34,7 +34,13 @@ export function LoginForm() {
 
       <div className="grid gap-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" autoComplete="current-password" required />
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+        />
         {fieldErrors?.password ? (
           <p className="text-xs text-destructive">{fieldErrors.password[0]}</p>
         ) : null}
@@ -45,7 +51,10 @@ export function LoginForm() {
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        No account? <Link href="/signup" className="text-primary hover:underline">Sign up</Link>
+        No account?{" "}
+        <Link href="/signup" className="text-primary hover:underline">
+          Sign up
+        </Link>
       </p>
     </form>
   );

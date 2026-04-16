@@ -4,7 +4,10 @@ const BASE = process.env.API_BASE_URL ?? "http://localhost:8000";
 export const TOKEN_COOKIE = "musync_token";
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
     super(message);
     this.name = "ApiError";
   }

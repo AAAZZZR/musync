@@ -28,7 +28,8 @@ export function SessionList({ sessions }: { sessions: FocusSession[] }) {
           <div className="min-w-0 flex-1">
             <p className="font-medium">{s.title}</p>
             <p className="text-xs text-muted-foreground">
-              {s.mood} &middot; {s.duration_minutes} min &middot; started {new Date(s.started_at).toLocaleString()}
+              {s.mood} &middot; {s.duration_minutes} min &middot; started{" "}
+              {new Date(s.started_at).toLocaleString()}
             </p>
           </div>
           <SessionStatusBadge status={s.status} />

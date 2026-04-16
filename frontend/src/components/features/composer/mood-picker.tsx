@@ -4,8 +4,14 @@ import { cn } from "@/lib/utils";
 import type { Mood } from "@/types/api";
 
 export function MoodPicker({
-  moods, value, onChange,
-}: { moods: Mood[]; value: string; onChange: (v: string) => void }) {
+  moods,
+  value,
+  onChange,
+}: {
+  moods: Mood[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="grid gap-2 md:grid-cols-3">
       {moods.map((m) => (

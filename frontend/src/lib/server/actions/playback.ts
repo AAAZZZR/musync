@@ -4,9 +4,10 @@ import { serverFetch } from "@/lib/server/api";
 import { playbackStartSchema } from "@/lib/validation/schemas";
 import type { ActionResult, StartPlaybackResponse, Track } from "@/types/api";
 
-export async function startPlaybackAction(
-  input: { mood: string; prompt: string },
-): Promise<ActionResult<StartPlaybackResponse>> {
+export async function startPlaybackAction(input: {
+  mood: string;
+  prompt: string;
+}): Promise<ActionResult<StartPlaybackResponse>> {
   const parsed = playbackStartSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   try {
@@ -20,9 +21,7 @@ export async function startPlaybackAction(
   }
 }
 
-export async function nextTrackAction(
-  sessionId: string,
-): Promise<ActionResult<{ track: Track }>> {
+export async function nextTrackAction(sessionId: string): Promise<ActionResult<{ track: Track }>> {
   if (!sessionId) return { ok: false, error: "Missing session id" };
   try {
     const data = await serverFetch<{ track: Track }>("/api/play/next", {
