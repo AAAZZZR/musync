@@ -37,7 +37,7 @@ describe("loginAction", () => {
   });
 
   it("成功時設 cookie 並 redirect /app/dashboard", async () => {
-    (serverFetch as any).mockResolvedValueOnce({
+    vi.mocked(serverFetch).mockResolvedValueOnce({
       access_token: "tok_x",
       token_type: "bearer",
       user: { id: "u1", email: "a@b.com", created_at: "2026-01-01" },
@@ -55,7 +55,7 @@ describe("loginAction", () => {
   });
 
   it("backend 401 回 ok:false + error", async () => {
-    (serverFetch as any).mockRejectedValueOnce(new Error("Invalid credentials"));
+    vi.mocked(serverFetch).mockRejectedValueOnce(new Error("Invalid credentials"));
     const formData = new FormData();
     formData.set("email", "a@b.com");
     formData.set("password", "12345678");
@@ -66,7 +66,7 @@ describe("loginAction", () => {
 
 describe("signupAction", () => {
   it("成功時設 cookie 並 redirect", async () => {
-    (serverFetch as any).mockResolvedValueOnce({
+    vi.mocked(serverFetch).mockResolvedValueOnce({
       access_token: "tok_y",
       token_type: "bearer",
       user: { id: "u2", email: "b@c.com", created_at: "2026-01-01" },

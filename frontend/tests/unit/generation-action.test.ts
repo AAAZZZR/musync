@@ -29,7 +29,7 @@ describe("createGenerationJobAction", () => {
       track: { id: "t1", title: "T", mood: "focus", prompt: "p", stream_url: "u",
                duration_sec: 180, source: "ace-1.5", created_at: "2026-01-01" },
     };
-    (serverFetch as any).mockResolvedValueOnce(fakeJob);
+    vi.mocked(serverFetch).mockResolvedValueOnce(fakeJob);
     const r = await createGenerationJobAction({
       mood: "focus", prompt: "lofi", duration_sec: 180,
     });
@@ -40,7 +40,7 @@ describe("createGenerationJobAction", () => {
   });
 
   it("backend 失敗回 error", async () => {
-    (serverFetch as any).mockRejectedValueOnce(new Error("Provider down"));
+    vi.mocked(serverFetch).mockRejectedValueOnce(new Error("Provider down"));
     const r = await createGenerationJobAction({
       mood: "focus", prompt: "lofi", duration_sec: 180,
     });
