@@ -1,15 +1,10 @@
 import { ComposerForm } from "@/components/features/composer/composer-form";
 import { PlayerStage } from "@/components/player/player-stage";
-import { serverFetch } from "@/lib/server/api";
-import { requireUser } from "@/lib/server/auth";
-import type { Mood, Profile } from "@/types/api";
+import { requireProfile } from "@/lib/server/auth";
+import { MOODS } from "@/lib/constants/moods";
 
 export default async function PlayPage() {
-  await requireUser();
-  const [moods, profile] = await Promise.all([
-    serverFetch<Mood[]>("/api/catalog/moods"),
-    serverFetch<Profile>("/api/profile"),
-  ]);
+  const profile = await requireProfile();
   return (
     <div className="grid gap-6">
       <PlayerStage />
@@ -17,7 +12,7 @@ export default async function PlayPage() {
         <h1 className="text-2xl font-semibold">Composer</h1>
         <p className="text-sm text-muted-foreground">Pick a mood, write a prompt, generate.</p>
       </div>
-      <ComposerForm moods={moods} defaultMood={profile.preferred_mood} />
+      <ComposerForm moods={MOODS} defaultMood={profile.preferredMood} />
     </div>
   );
 }

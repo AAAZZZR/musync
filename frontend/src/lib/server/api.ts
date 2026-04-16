@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
 const BASE = process.env.API_BASE_URL ?? "http://localhost:8000";
-export const TOKEN_COOKIE = "musync_token";
 
 export class ApiError extends Error {
   constructor(
@@ -13,24 +12,22 @@ export class ApiError extends Error {
   }
 }
 
-export class UnauthorizedError extends ApiError {
-  constructor() {
-    super("Unauthorized", 401);
-    this.name = "UnauthorizedError";
-  }
-}
-
 export async function serverFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = (await cookies()).get(TOKEN_COOKIE)?.value;
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const headers = new Headers(init.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (session?.access_token) {
+    headers.set("Authorization", `Bearer ${session.access_token}`);
+  }
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
   const res = await fetch(`${BASE}${path}`, { cache: "no-store", ...init, headers });
 
-  if (res.status === 401) throw new UnauthorizedError();
   if (!res.ok) {
     const data = (await res.json().catch(() => null)) as { detail?: string } | null;
     throw new ApiError(data?.detail ?? res.statusText, res.status);

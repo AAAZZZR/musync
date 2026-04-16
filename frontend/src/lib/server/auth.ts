@@ -1,24 +1,39 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { serverFetch, TOKEN_COOKIE } from "@/lib/server/api";
-import type { User } from "@/types/api";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import type { Profile } from "@prisma/client";
 
-export async function getCurrentUser(): Promise<User | null> {
-  const token = (await cookies()).get(TOKEN_COOKIE)?.value;
-  if (!token) return null;
-  try {
-    return await serverFetch<User>("/api/auth/me");
-  } catch {
-    return null;
-  }
+export async function getSupabaseUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
 }
 
-export async function requireUser(): Promise<User> {
-  const user = await getCurrentUser();
+export async function requireSupabaseUser() {
+  const user = await getSupabaseUser();
   if (!user) redirect("/login");
   return user;
 }
 
-export async function clearAuthCookie() {
-  (await cookies()).delete(TOKEN_COOKIE);
+export async function getProfile(): Promise<Profile | null> {
+  const user = await getSupabaseUser();
+  if (!user) return null;
+  return prisma.profile.findUnique({ where: { userId: user.id } });
+}
+
+export async function requireProfile(): Promise<Profile> {
+  const user = await requireSupabaseUser();
+  let profile = await prisma.profile.findUnique({ where: { userId: user.id } });
+  if (!profile) {
+    profile = await prisma.profile.create({
+      data: {
+        userId: user.id,
+        email: user.email!,
+        fullName: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User",
+      },
+    });
+  }
+  return profile;
 }

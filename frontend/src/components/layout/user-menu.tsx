@@ -9,10 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { logoutAction } from "@/lib/server/actions/auth";
-import type { User } from "@/types/api";
 
-export function UserMenu({ user }: { user: User }) {
-  const initial = user.email.slice(0, 1).toUpperCase();
+export function UserMenu({ email }: { email: string }) {
+  const initial = email.slice(0, 1).toUpperCase();
 
   return (
     <DropdownMenu>
@@ -22,7 +21,7 @@ export function UserMenu({ user }: { user: User }) {
             <AvatarFallback>{initial}</AvatarFallback>
           </Avatar>
           <div className="flex flex-1 flex-col items-start">
-            <span className="text-sm font-medium leading-none">{user.email}</span>
+            <span className="text-sm font-medium leading-none">{email}</span>
           </div>
         </button>
       </DropdownMenuTrigger>

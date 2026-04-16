@@ -3,33 +3,34 @@ import { Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/features/empty-state";
-import { serverFetch } from "@/lib/server/api";
-import { requireUser } from "@/lib/server/auth";
-import type { FocusSession, Profile, Track } from "@/types/api";
+import { prisma } from "@/lib/prisma";
+import { requireProfile } from "@/lib/server/auth";
 
 export default async function DashboardPage() {
-  await requireUser();
-  const [profile, sessions, tracks] = await Promise.all([
-    serverFetch<Profile>("/api/profile"),
-    serverFetch<FocusSession[]>("/api/focus-sessions"),
-    serverFetch<Track[]>("/api/library/tracks"),
+  const profile = await requireProfile();
+  const [sessions, tracks] = await Promise.all([
+    prisma.focusSession.findMany({
+      where: { profileId: profile.id },
+      orderBy: { startedAt: "desc" },
+    }),
+    prisma.track.findMany({
+      where: { profileId: profile.id },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const active = sessions.find((s) => s.status === "active");
+  const todayStr = new Date().toISOString().slice(0, 10);
   const todayMin = sessions
-    .filter(
-      (s) =>
-        s.status === "completed" &&
-        s.completed_at?.startsWith(new Date().toISOString().slice(0, 10)),
-    )
-    .reduce((acc, s) => acc + s.duration_minutes, 0);
+    .filter((s) => s.status === "completed" && s.completedAt?.toISOString().startsWith(todayStr))
+    .reduce((acc, s) => acc + s.durationMinutes, 0);
 
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Welcome back, {profile.full_name}</h1>
+        <h1 className="text-2xl font-semibold">Welcome back, {profile.fullName}</h1>
         <p className="text-sm text-muted-foreground">
-          Today: {todayMin} / {profile.daily_focus_minutes} focus minutes
+          Today: {todayMin} / {profile.dailyFocusMinutes} focus minutes
         </p>
       </div>
 
@@ -38,7 +39,7 @@ export default async function DashboardPage() {
           <h2 className="text-sm font-medium text-muted-foreground">Active session</h2>
           {active ? (
             <p className="mt-2 font-medium">
-              {active.title} &middot; {active.duration_minutes} min
+              {active.title} &middot; {active.durationMinutes} min
             </p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">No active session</p>

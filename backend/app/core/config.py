@@ -9,17 +9,12 @@ class Settings(BaseSettings):
     app_port: int = 8000
     cors_allow_origins: str = "http://localhost:3000"
 
-    supabase_url: str = ""
-    supabase_service_role_key: str = ""
     supabase_jwt_secret: str = ""
-    supabase_db_schema: str = "public"
-    supabase_storage_bucket: str = "generated-audio"
 
     ace_api_base_url: str = ""
     ace_api_key: str = ""
     ace_model: str = "ace-1.5"
     ace_webhook_secret: str = ""
-    google_client_id: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

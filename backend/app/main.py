@@ -2,13 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.routers import auth, catalog, focus_sessions, generation, library, playback, profile, system
+from app.routers import catalog, generation, system
 from app.state import seed_tracks
 
 settings = get_settings()
 seed_tracks()
 
-app = FastAPI(title="MuSync API", version="0.2.0")
+app = FastAPI(title="MuSync API", version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,9 +20,4 @@ app.add_middleware(
 
 app.include_router(system.router)
 app.include_router(catalog.router)
-app.include_router(auth.router)
-app.include_router(profile.router)
-app.include_router(playback.router)
 app.include_router(generation.router)
-app.include_router(library.router)
-app.include_router(focus_sessions.router)

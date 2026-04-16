@@ -1,9 +1,25 @@
 import { LibraryGrid } from "@/components/features/library/library-grid";
-import { serverFetch } from "@/lib/server/api";
-import type { Track } from "@/types/api";
+import { prisma } from "@/lib/prisma";
+import { requireProfile } from "@/lib/server/auth";
 
 export default async function LibraryPage() {
-  const tracks = await serverFetch<Track[]>("/api/library/tracks");
+  const profile = await requireProfile();
+  const dbTracks = await prisma.track.findMany({
+    where: { profileId: profile.id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const tracks = dbTracks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    mood: t.mood,
+    prompt: t.prompt,
+    stream_url: t.streamUrl,
+    duration_sec: t.durationSec,
+    source: t.source,
+    created_at: t.createdAt.toISOString(),
+  }));
+
   return (
     <div className="grid gap-6">
       <div>

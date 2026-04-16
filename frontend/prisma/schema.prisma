@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique @map("user_id")
+  email              String   @unique
+  fullName           String   @map("full_name")
+  onboardingComplete Boolean  @default(false) @map("onboarding_complete")
+  preferredMood      String   @default("focus") @map("preferred_mood")
+  dailyFocusMinutes  Int      @default(90) @map("daily_focus_minutes")
+  backgroundVolume   Int      @default(60) @map("background_volume")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tracks           Track[]
+  focusSessions    FocusSession[]
+  generationJobs   GenerationJob[]
+  playbackSessions PlaybackSession[]
+
+  @@map("profiles")
+}
+
+model Track {
+  id          String   @id @default(uuid())
+  profileId   String   @map("profile_id")
+  title       String
+  mood        String
+  prompt      String
+  streamUrl   String   @map("stream_url")
+  durationSec Int      @map("duration_sec")
+  source      String   @default("seed")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  profile       Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  generationJob GenerationJob?
+
+  @@index([profileId])
+  @@index([mood])
+  @@map("tracks")
+}
+
+model FocusSession {
+  id              String    @id @default(uuid())
+  profileId       String    @map("profile_id")
+  title           String
+  mood            String
+  durationMinutes Int       @map("duration_minutes")
+  prompt          String
+  status          String    @default("active")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([status])
+  @@map("focus_sessions")
+}
+
+model GenerationJob {
+  id               String    @id @default(uuid())
+  profileId        String    @map("profile_id")
+  mood             String
+  prompt           String
+  promptNormalized String    @map("prompt_normalized")
+  model            String    @default("ace-1.5")
+  status           String    @default("pending")
+  durationSec      Int       @map("duration_sec")
+  trackId          String?   @unique @map("track_id")
+  providerJobId    String?   @map("provider_job_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  completedAt      DateTime? @map("completed_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  track   Track?  @relation(fields: [trackId], references: [id], onDelete: SetNull)
+
+  @@index([profileId])
+  @@index([status])
+  @@map("generation_jobs")
+}
+
+model PlaybackSession {
+  id               String   @id @default(uuid())
+  profileId        String   @map("profile_id")
+  mood             String
+  prompt           String
+  promptNormalized String   @map("prompt_normalized")
+  startedAt        DateTime @default(now()) @map("started_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("playback_sessions")
+}
+
+model SeedTrack {
+  id          String @id
+  mood        String
+  title       String
+  prompt      String
+  streamUrl   String @map("stream_url")
+  durationSec Int    @map("duration_sec")
+  sortOrder   Int    @default(0) @map("sort_order")
+
+  @@index([mood])
+  @@map("seed_tracks")
+}

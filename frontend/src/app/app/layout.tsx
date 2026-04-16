@@ -1,12 +1,12 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { AudioHost } from "@/components/player/audio-host";
 import { MiniPlayer } from "@/components/player/mini-player";
-import { requireUser } from "@/lib/server/auth";
+import { requireProfile } from "@/lib/server/auth";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireUser();
+  const profile = await requireProfile();
   return (
-    <AppShell user={user}>
+    <AppShell profile={profile}>
       {children}
       <AudioHost />
       <MiniPlayer />

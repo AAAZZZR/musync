@@ -4,14 +4,9 @@ from typing import Deque
 
 from app.domain import MOODS, Track, now_iso
 
+
 TRACK_POOL: dict[str, Deque[Track]] = defaultdict(deque)
-USERS: dict[str, dict] = {}
-TOKENS: dict[str, str] = {}
-PROFILES: dict[str, dict] = {}
-PLAYBACK_SESSIONS: dict[str, dict] = {}
 GENERATION_JOBS: list[dict] = []
-TRACK_LIBRARY: list[dict] = []
-FOCUS_SESSIONS: list[dict] = []
 
 
 def seed_tracks() -> None:

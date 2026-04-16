@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { LayoutDashboard, Music, Library, Timer, Settings } from "lucide-react";
+import { LayoutDashboard, Library, Music, Settings, Timer } from "lucide-react";
 import { SidebarNavItem } from "./sidebar-nav-item";
 import { UserMenu } from "./user-menu";
-import type { User } from "@/types/api";
+import type { Profile } from "@prisma/client";
 
-export function Sidebar({ user }: { user: User }) {
+export function Sidebar({ profile }: { profile: Profile }) {
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-card/40">
       <div className="px-4 py-5">
@@ -20,7 +20,7 @@ export function Sidebar({ user }: { user: User }) {
         <SidebarNavItem href="/app/settings" icon={Settings} label="Settings" />
       </nav>
       <div className="mt-auto border-t p-2">
-        <UserMenu user={user} />
+        <UserMenu email={profile.email} />
       </div>
     </aside>
   );
