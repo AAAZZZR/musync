@@ -9,3 +9,16 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Claude Code local settings
+.claude/
+
+# Env
+*.env
+*.env.local
+!.env.example
+
+# Tests
+frontend/playwright-report/
+frontend/test-results/
+backend/.pytest_cache/

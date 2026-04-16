@@ -4,13 +4,13 @@ import { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "MuSync MVP",
-  description: "Mood based endless lofi background music",
+  description: "Focus music app with login, generation, and focus sessions",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="bg-ink text-white antialiased">{children}</body>
     </html>
   );
 }
