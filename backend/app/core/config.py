@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     ace_api_key: str = ""
     ace_model: str = "ace-1.5"
     ace_webhook_secret: str = ""
+    google_client_id: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -87,7 +87,7 @@ def create_generated_track(user_id: str, payload: GenerationCreateRequest) -> di
     return track_dict
 
 
-def create_user(email: str, password: str, full_name: str) -> dict:
+def create_user(email: str, full_name: str, password: str | None = None) -> dict:
     if any(user["email"] == email for user in USERS.values()):
         raise HTTPException(status_code=409, detail="Email already registered")
 

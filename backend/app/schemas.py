@@ -112,5 +112,9 @@ class CatalogMoodOut(BaseModel):
     description: str
 
 
+class GoogleAuthRequest(BaseModel):
+    id_token: str = Field(min_length=10)
+
+
 class ApiMessage(BaseModel):
     message: str
