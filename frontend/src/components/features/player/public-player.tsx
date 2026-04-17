@@ -70,9 +70,14 @@ export function PublicPlayer({
         </Link>
         <nav className="flex items-center gap-3">
           {isLoggedIn ? (
-            <Link href="/app/dashboard">
-              <Button variant="ghost">Dashboard</Button>
-            </Link>
+            <>
+              <Link href="/app/dashboard">
+                <Button variant="ghost">Dashboard</Button>
+              </Link>
+              <Link href="/app/settings">
+                <Button variant="ghost">Settings</Button>
+              </Link>
+            </>
           ) : (
             <>
               <Link href="/login">
