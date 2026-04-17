@@ -9,7 +9,6 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Module-level httpx client, initialised by lifespan in main.py
 _client: httpx.AsyncClient | None = None
 
 
@@ -36,11 +35,7 @@ def _get_client() -> httpx.AsyncClient:
     return _client
 
 
-async def submit_task(
-    prompt: str,
-    duration_sec: int,
-    audio_format: str = "mp3",
-) -> str:
+async def submit_task(prompt: str, duration_sec: int) -> str:
     """Submit a text2music task. Returns ace task_id."""
     client = _get_client()
     res = await client.post(
@@ -49,8 +44,8 @@ async def submit_task(
             "prompt": prompt,
             "lyrics": "",
             "task_type": "text2music",
-            "audio_duration": duration_sec,
-            "audio_format": audio_format,
+            "duration": duration_sec,
+            "audio_format": "wav",
             "batch_size": 1,
         },
     )
@@ -81,8 +76,10 @@ async def poll_task(task_id: str) -> dict:
         result = item["result"]
         if isinstance(result, str):
             result = json.loads(result)
-        # result.file 是 "/v1/audio?path=..." 格式
-        audio_path = result.get("file")
+        if isinstance(result, list) and len(result) > 0:
+            result = result[0]
+        if isinstance(result, dict):
+            audio_path = result.get("file") or None
 
     return {"status": status, "audio_path": audio_path}
 
@@ -91,7 +88,6 @@ def build_audio_url(audio_path: str) -> str:
     """Turn ACE relative audio path into full URL."""
     settings = get_settings()
     base = settings.ace_api_base_url.rstrip("/")
-    # audio_path 可能已經是 "/v1/audio?path=..." 或只是 path
     if audio_path.startswith("/"):
         return f"{base}{audio_path}"
     return f"{base}/v1/audio?path={audio_path}"

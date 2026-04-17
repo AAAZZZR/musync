@@ -13,8 +13,7 @@ class Settings(BaseSettings):
 
     ace_api_base_url: str = ""
     ace_api_key: str = ""
-    ace_model: str = "ace-1.5"
-    ace_webhook_secret: str = ""
+    ace_model: str = "acestep-v15-turbo"
 
     model_config = SettingsConfigDict(
         env_file=".env",

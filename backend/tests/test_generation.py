@@ -16,7 +16,7 @@ def test_create_generation_job_mock_mode(auth_client):
     assert body["mood"] == "focus"
     assert body["status"] == "completed"
     assert body["track"] is not None
-    assert body["track"]["source"] == "ace-1.5"
+    assert body["track"]["source"] == "acestep-v15-turbo"
 
 
 def test_get_job(auth_client):
