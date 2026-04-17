@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.ace_client import build_audio_url, poll_task, submit_task
+from app.ace_client import poll_task, submit_task
 from app.core.config import get_settings
 from app.dependencies import get_current_user_id
 from app.domain import MOODS, now_iso
@@ -92,7 +92,15 @@ async def get_job(
 
         if result["status"] == 1:
             # 成功 — 建 track
-            audio_url = build_audio_url(result["audio_path"]) if result["audio_path"] else ""
+            # audio_path 格式: /v1/audio?path=%2Fworkspace%2F...
+            # 轉成 /api/audio?path=<decoded_path> 讓前端透過 backend proxy 拿
+            raw_path = result.get("audio_path", "")
+            if raw_path.startswith("/v1/audio?path="):
+                from urllib.parse import unquote
+                file_path = unquote(raw_path.replace("/v1/audio?path=", ""))
+                audio_url = f"/api/audio?path={file_path}"
+            else:
+                audio_url = raw_path
             track_id = generate_track_id()
             job["status"] = "completed"
             job["completed_at"] = now_iso()

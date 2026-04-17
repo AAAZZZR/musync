@@ -25,7 +25,7 @@ export function ComposerForm({ moods, defaultMood }: { moods: Mood[]; defaultMoo
       const r = await createGenerationJobAction({
         mood,
         prompt,
-        duration_sec: Math.max(minutes * 60, 180),
+        duration_sec: 60,
         title,
       });
       if (!r.ok) {
