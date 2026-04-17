@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["app"]
 }
 
 model Profile {
@@ -25,6 +26,7 @@ model Profile {
   playbackSessions PlaybackSession[]
 
   @@map("profiles")
+  @@schema("app")
 }
 
 model Track {
@@ -44,6 +46,7 @@ model Track {
   @@index([profileId])
   @@index([mood])
   @@map("tracks")
+  @@schema("app")
 }
 
 model FocusSession {
@@ -62,6 +65,7 @@ model FocusSession {
   @@index([profileId])
   @@index([status])
   @@map("focus_sessions")
+  @@schema("app")
 }
 
 model GenerationJob {
@@ -84,6 +88,7 @@ model GenerationJob {
   @@index([profileId])
   @@index([status])
   @@map("generation_jobs")
+  @@schema("app")
 }
 
 model PlaybackSession {
@@ -98,6 +103,7 @@ model PlaybackSession {
 
   @@index([profileId])
   @@map("playback_sessions")
+  @@schema("app")
 }
 
 model SeedTrack {
@@ -111,4 +117,5 @@ model SeedTrack {
 
   @@index([mood])
   @@map("seed_tracks")
+  @@schema("app")
 }
