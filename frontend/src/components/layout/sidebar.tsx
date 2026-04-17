@@ -8,7 +8,7 @@ export function Sidebar({ profile }: { profile: Profile }) {
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-card/40">
       <div className="px-4 py-5">
-        <Link href="/app/dashboard" className="text-lg font-semibold">
+        <Link href="/app/dashboard" className="font-serif text-xl font-semibold">
           MuSync
         </Link>
       </div>

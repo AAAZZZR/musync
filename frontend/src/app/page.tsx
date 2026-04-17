@@ -5,7 +5,7 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen">
       <header className="container flex items-center justify-between py-6">
-        <Link href="/" className="text-lg font-semibold">
+        <Link href="/" className="font-serif text-xl font-semibold">
           MuSync
         </Link>
         <nav className="flex items-center gap-3">
@@ -19,7 +19,7 @@ export default function LandingPage() {
       </header>
 
       <section className="container py-24 text-center">
-        <h1 className="mx-auto max-w-3xl text-5xl font-semibold leading-tight md:text-6xl">
+        <h1 className="mx-auto max-w-3xl font-serif text-5xl font-semibold leading-tight md:text-6xl">
           Background music tuned to how you focus.
         </h1>
         <p className="mx-auto mt-6 max-w-xl text-muted-foreground">
@@ -53,8 +53,8 @@ export default function LandingPage() {
             body: "Every generation is saved to your library and re-playable across sessions.",
           },
         ].map((f) => (
-          <div key={f.title} className="rounded-lg border bg-card p-6">
-            <h3 className="text-lg font-semibold">{f.title}</h3>
+          <div key={f.title} className="rounded-lg border bg-card p-6 shadow-sm">
+            <h3 className="font-serif text-lg font-semibold">{f.title}</h3>
             <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
           </div>
         ))}
