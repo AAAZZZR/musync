@@ -6,7 +6,7 @@ import { requireProfile } from "@/lib/server/auth";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireProfile();
   return (
-    <AppShell profile={profile}>
+    <AppShell email={profile.email}>
       {children}
       <AudioHost />
       <MiniPlayer />

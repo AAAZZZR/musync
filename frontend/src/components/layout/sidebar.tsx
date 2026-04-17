@@ -1,10 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { LayoutDashboard, Library, Music, Settings, Timer } from "lucide-react";
 import { SidebarNavItem } from "./sidebar-nav-item";
 import { UserMenu } from "./user-menu";
-import type { Profile } from "@prisma/client";
 
-export function Sidebar({ profile }: { profile: Profile }) {
+export function Sidebar({ email }: { email: string }) {
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-card/40">
       <div className="px-4 py-5">
@@ -20,7 +21,7 @@ export function Sidebar({ profile }: { profile: Profile }) {
         <SidebarNavItem href="/app/settings" icon={Settings} label="Settings" />
       </nav>
       <div className="mt-auto border-t p-2">
-        <UserMenu email={profile.email} />
+        <UserMenu email={email} />
       </div>
     </aside>
   );

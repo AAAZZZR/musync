@@ -25,15 +25,14 @@ export async function getProfile(): Promise<Profile | null> {
 
 export async function requireProfile(): Promise<Profile> {
   const user = await requireSupabaseUser();
-  let profile = await prisma.profile.findUnique({ where: { userId: user.id } });
-  if (!profile) {
-    profile = await prisma.profile.create({
-      data: {
-        userId: user.id,
-        email: user.email!,
-        fullName: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User",
-      },
-    });
-  }
-  return profile;
+  const fullName = user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User";
+  return prisma.profile.upsert({
+    where: { userId: user.id },
+    update: {},
+    create: {
+      userId: user.id,
+      email: user.email!,
+      fullName,
+    },
+  });
 }
