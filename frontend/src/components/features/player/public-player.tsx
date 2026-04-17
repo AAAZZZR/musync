@@ -136,8 +136,10 @@ export function PublicPlayer({
               <Music className="h-8 w-8 text-primary" />
             </div>
             <div className="text-center">
-              <p className="font-serif text-lg font-semibold">{currentTrack.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{currentTrack.mood}</p>
+              <p className="font-serif text-lg font-semibold">
+                {moods.find((m) => m.key === currentTrack.mood)?.label ?? currentTrack.mood}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">Now playing</p>
             </div>
 
             {/* Controls */}

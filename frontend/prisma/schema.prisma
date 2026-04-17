@@ -17,6 +17,8 @@ model Profile {
   preferredMood      String   @default("focus") @map("preferred_mood")
   dailyFocusMinutes  Int      @default(90) @map("daily_focus_minutes")
   backgroundVolume   Int      @default(60) @map("background_volume")
+  trackLimit         Int      @default(5) @map("track_limit")
+  plan               String   @default("free") @map("plan")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
