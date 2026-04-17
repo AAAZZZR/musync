@@ -35,25 +35,33 @@ def _get_client() -> httpx.AsyncClient:
     return _client
 
 
-async def submit_task(prompt: str, duration_sec: int) -> str:
-    """Submit a text2music task. Returns ace task_id."""
+async def submit_task(prompt: str, duration_sec: int, max_retries: int = 3) -> str:
+    """Submit a text2music task. Retries on empty response (RunPod proxy quirk)."""
     client = _get_client()
-    res = await client.post(
-        "/release_task",
-        json={
-            "prompt": prompt,
-            "lyrics": "",
-            "task_type": "text2music",
-            "duration": duration_sec,
-            "audio_format": "wav",
-            "batch_size": 1,
-        },
-    )
-    res.raise_for_status()
-    body = res.json()
-    task_id = body["data"]["task_id"]
-    logger.info("ACE task submitted: %s", task_id)
-    return task_id
+    payload = {
+        "prompt": prompt,
+        "lyrics": "",
+        "task_type": "text2music",
+        "duration": duration_sec,
+        "audio_format": "wav",
+        "batch_size": 1,
+    }
+
+    import asyncio
+
+    for attempt in range(max_retries):
+        res = await client.post("/release_task", json=payload)
+        if res.status_code == 404 and not res.text:
+            logger.warning("ACE /release_task returned empty 404, retrying (%d/%d)", attempt + 1, max_retries)
+            await asyncio.sleep(2)
+            continue
+        res.raise_for_status()
+        body = res.json()
+        task_id = body["data"]["task_id"]
+        logger.info("ACE task submitted: %s", task_id)
+        return task_id
+
+    raise RuntimeError("ACE /release_task failed after retries")
 
 
 async def poll_task(task_id: str) -> dict:
