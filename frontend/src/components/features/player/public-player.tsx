@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { usePlayerStore } from "@/lib/stores/player-store";
@@ -28,15 +28,26 @@ export function PublicPlayer({
   const pause = usePlayerStore((s) => s.pause);
   const resume = usePlayerStore((s) => s.resume);
   const setVolume = usePlayerStore((s) => s.setVolume);
+  const audioUnlockRef = useRef(false);
+
+  function unlockAudio() {
+    // 在 user click context 裡播放一個空音頻來解鎖 audio context
+    if (audioUnlockRef.current) return;
+    const audio = document.querySelector("audio");
+    if (audio) {
+      audio.play().then(() => { audio.pause(); }).catch(() => {});
+    }
+    audioUnlockRef.current = true;
+  }
 
   function handleMoodSelect(mood: string) {
+    unlockAudio();
     setSelectedMood(mood);
     startTransition(async () => {
       const tracks = await getSeedTracksByMood(mood);
       if (tracks.length > 0) {
         const randomIndex = Math.floor(Math.random() * tracks.length);
         usePlayerStore.getState().playTrack(tracks[randomIndex]);
-        // 把剩下的加到 queue
         const rest = tracks.filter((_, i) => i !== randomIndex);
         if (rest.length > 0) {
           usePlayerStore.getState().enqueue(rest);
