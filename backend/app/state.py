@@ -1,35 +1,7 @@
-from collections import defaultdict, deque
-from dataclasses import asdict
-from typing import Deque
+"""In-memory state for generation jobs.
 
-from app.domain import MOODS, Track, now_iso
+Jobs live here until the frontend persists them to Prisma.
+This is intentionally simple — no DB on the backend side.
+"""
 
-
-TRACK_POOL: dict[str, Deque[Track]] = defaultdict(deque)
-GENERATION_JOBS: list[dict] = []
-
-
-def seed_tracks() -> None:
-    if any(TRACK_POOL.values()):
-        return
-
-    for mood in MOODS:
-        for i in range(1, 7):
-            TRACK_POOL[mood].append(
-                Track(
-                    id=f"{mood}_seed_{i}",
-                    title=f"{MOODS[mood]['label']} Seed {i}",
-                    mood=mood,
-                    prompt=f"Seed loop for {mood}",
-                    stream_url="https://samplelib.com/lib/preview/mp3/sample-3s.mp3",
-                    duration_sec=180,
-                    source="seed",
-                    created_at=now_iso(),
-                )
-            )
-
-
-def serialize_track(track: Track | dict) -> dict:
-    if isinstance(track, Track):
-        return asdict(track)
-    return track
+GENERATION_JOBS: dict[str, dict] = {}  # keyed by job_id

@@ -3,9 +3,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 
 from app.core.config import get_settings
-from app.domain import MOODS, Track, now_iso
-from app.schemas import GenerationCreateRequest
-from app.state import TRACK_POOL, serialize_track
+from app.domain import MOODS, now_iso
 
 settings = get_settings()
 
@@ -29,18 +27,9 @@ def normalize_prompt(mood: str, user_prompt: str) -> str:
     return f"{base_prompt}; {cleaned}; no vocal; seamless background loop"
 
 
-def create_generated_track(user_id: str, payload: GenerationCreateRequest) -> dict:
-    title = payload.title or f"{MOODS[payload.mood]['label']} Flow"
-    track = Track(
-        id=f"trk_{uuid4().hex[:10]}",
-        title=title,
-        mood=payload.mood,
-        prompt=payload.prompt,
-        stream_url="https://samplelib.com/lib/preview/mp3/sample-3s.mp3",
-        duration_sec=payload.duration_sec,
-        source="ace-1.5",
-        created_at=now_iso(),
-    )
-    track_dict = serialize_track(track)
-    TRACK_POOL[payload.mood].append(track)
-    return track_dict
+def generate_job_id() -> str:
+    return f"job_{uuid4().hex[:10]}"
+
+
+def generate_track_id() -> str:
+    return f"trk_{uuid4().hex[:10]}"
