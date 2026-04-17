@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.ace_client import close_client, init_client
 from app.core.config import get_settings
-from app.routers import catalog, generation, system
+from app.routers import audio, catalog, generation, system
 
 settings = get_settings()
 
@@ -33,3 +33,4 @@ app.add_middleware(
 app.include_router(system.router)
 app.include_router(catalog.router)
 app.include_router(generation.router)
+app.include_router(audio.router)
