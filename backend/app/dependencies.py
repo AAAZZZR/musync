@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import Depends, Header, HTTPException, status
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,8 +50,9 @@ async def get_current_auth_user(
     email = payload.get("email", "")
     metadata = payload.get("user_metadata") or {}
     full_name = metadata.get("full_name") or (email.split("@")[0] if email else "User")
+    tos_accepted = bool(metadata.get("tos_accepted"))
 
-    return AuthUser(id=user_id, email=email, full_name=full_name)
+    return AuthUser(id=user_id, email=email, full_name=full_name, tos_accepted=tos_accepted)
 
 
 async def get_current_profile(
@@ -63,6 +66,9 @@ async def get_current_profile(
         return profile
 
     profile = Profile(user_id=auth.id, email=auth.email, full_name=auth.full_name)
+    # 來自 email/password signup 時 JWT user_metadata.tos_accepted=true → 立即記錄時間
+    if auth.tos_accepted:
+        profile.tos_accepted_at = datetime.now(UTC)
     session.add(profile)
     await session.commit()
     await session.refresh(profile)

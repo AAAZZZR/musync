@@ -16,6 +16,7 @@ class AuthUser(BaseModel):
     id: str
     email: str
     full_name: str
+    tos_accepted: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -27,6 +28,7 @@ class SignupRequest(BaseModel):
     email: str
     password: str = Field(min_length=8, max_length=128)
     full_name: str = Field(min_length=2, max_length=80)
+    tos_accepted: bool = False
 
 
 class RefreshRequest(BaseModel):
@@ -190,3 +192,24 @@ class CatalogMoodOut(BaseModel):
 
 class ApiMessage(BaseModel):
     message: str
+
+
+# ===== Account management (agent C) =====
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class ChangeEmailRequest(BaseModel):
+    new_email: str = Field(min_length=3, max_length=255)
+
+
+class ChangeEmailResponse(BaseModel):
+    ok: bool
+    email: str
+
+
+class OkResponse(BaseModel):
+    ok: bool

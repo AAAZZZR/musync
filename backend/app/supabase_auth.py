@@ -53,14 +53,20 @@ async def _post(path: str, body: dict[str, Any], access_token: str | None = None
         return {}
 
 
-async def sign_up(email: str, password: str, full_name: str) -> dict:
-    """建立新帳號。若 Dashboard 啟用 email 驗證，session 會是 null（需要先驗證）。"""
+async def sign_up(email: str, password: str, full_name: str, *, metadata: dict | None = None) -> dict:
+    """建立新帳號。若 Dashboard 啟用 email 驗證，session 會是 null（需要先驗證）。
+
+    metadata 會 merge 進 user_metadata（Supabase 稱為 `data`）。
+    """
+    user_data: dict[str, Any] = {"full_name": full_name}
+    if metadata:
+        user_data.update(metadata)
     return await _post(
         "/signup",
         {
             "email": email,
             "password": password,
-            "data": {"full_name": full_name},
+            "data": user_data,
         },
     )
 
@@ -99,3 +105,64 @@ async def exchange_pkce_code(auth_code: str, code_verifier: str) -> dict:
         "/token?grant_type=pkce",
         {"auth_code": auth_code, "code_verifier": code_verifier},
     )
+
+
+async def verify_password(email: str, password: str) -> bool:
+    """用 sign_in_with_password 作為 verify 手段。True=對，False=錯。
+
+    其他錯誤（Supabase 離線、rate limit 等）會 raise。
+    """
+    url = f"{_base_url()}/auth/v1/token?grant_type=password"
+    headers = _headers()
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        res = await client.post(url, headers=headers, json={"email": email, "password": password})
+
+    if res.status_code == 200:
+        return True
+    if res.status_code in (400, 401):
+        return False
+    # 其他 status → 丟出讓 caller 處理
+    detail: Any
+    try:
+        data = res.json()
+        detail = data.get("msg") or data.get("error_description") or data.get("error") or data
+    except Exception:
+        detail = res.text
+    raise HTTPException(status_code=res.status_code, detail=detail)
+
+
+async def admin_update_user(user_id: str, fields: dict[str, Any]) -> dict:
+    """Admin API 改 user — password / email / email_confirm / user_metadata 等。"""
+    url = f"{_base_url()}/auth/v1/admin/users/{user_id}"
+    headers = _headers()
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        res = await client.put(url, headers=headers, json=fields)
+    if res.status_code >= 400:
+        detail: Any
+        try:
+            data = res.json()
+            detail = data.get("msg") or data.get("error_description") or data.get("error") or data
+        except Exception:
+            detail = res.text
+        raise HTTPException(status_code=res.status_code, detail=detail)
+    try:
+        return res.json()
+    except Exception:
+        return {}
+
+
+async def admin_delete_user(user_id: str) -> None:
+    """Admin API 硬刪 user。404 視為成功（idempotent）。"""
+    url = f"{_base_url()}/auth/v1/admin/users/{user_id}"
+    headers = _headers()
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        res = await client.delete(url, headers=headers)
+    if res.status_code in (200, 204, 404):
+        return
+    detail: Any
+    try:
+        data = res.json()
+        detail = data.get("msg") or data.get("error_description") or data.get("error") or data
+    except Exception:
+        detail = res.text
+    raise HTTPException(status_code=res.status_code, detail=detail)
