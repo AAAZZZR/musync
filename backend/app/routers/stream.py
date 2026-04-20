@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
@@ -36,11 +37,29 @@ async def track_stream(
         # private track：必須是 owner
         profile: Profile | None = None
         if auth:
-            from sqlalchemy import select
-
             profile = await session.scalar(select(Profile).where(Profile.user_id == auth.id))
         if not profile or profile.id != track.profile_id:
             raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Quota check：降級後舊的超量曲目要擋掉
+        # 只對 private track 的 owner 做（public track 永遠放行；非 owner 已在上面擋了）
+        total_user_tracks = await session.scalar(
+            select(func.count(Track.id)).where(Track.profile_id == profile.id)
+        ) or 0
+        if total_user_tracks > profile.track_limit:
+            allowed_ids = set(
+                (await session.scalars(
+                    select(Track.id)
+                    .where(Track.profile_id == profile.id)
+                    .order_by(Track.created_at.desc())
+                    .limit(profile.track_limit)
+                )).all()
+            )
+            if track.id not in allowed_ids:
+                raise HTTPException(
+                    status_code=402,
+                    detail="Track exceeds your plan limit — upgrade to access",
+                )
 
     url = await create_signed_url(track.storage_path)
     return StreamUrlOut(url=url, expires_in=DEFAULT_TTL_SEC)

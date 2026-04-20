@@ -190,3 +190,13 @@ class CatalogMoodOut(BaseModel):
 
 class ApiMessage(BaseModel):
     message: str
+
+
+# ===== Creators =====
+
+
+class CreatorProfileOut(BaseModel):
+    id: str
+    full_name: str
+    total_public_tracks: int
+    tracks: list[CommunityTrackOut]
