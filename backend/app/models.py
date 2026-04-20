@@ -100,7 +100,12 @@ class FocusSession(Base):
     mood: Mapped[str] = mapped_column(String, nullable=False)
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     prompt: Mapped[str] = mapped_column(String, nullable=False)
-    status: Mapped[str] = mapped_column(String, default="active", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String,
+        default="active",
+        nullable=False,
+        doc="active | paused | completed | abandoned",
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
