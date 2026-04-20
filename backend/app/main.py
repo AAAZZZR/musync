@@ -11,6 +11,7 @@ from app.routers import (
     billing,
     catalog,
     community,
+    creators,
     focus_sessions,
     generation,
     playback,
@@ -54,6 +55,7 @@ app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(tracks.router)
 app.include_router(community.router)
+app.include_router(creators.router)
 app.include_router(focus_sessions.router)
 app.include_router(generation.router)
 app.include_router(playback.router)

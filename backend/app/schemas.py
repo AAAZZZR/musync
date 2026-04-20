@@ -197,7 +197,7 @@ class ApiMessage(BaseModel):
     message: str
 
 
-# ===== Account management (agent C) =====
+# ===== Account management =====
 
 
 class ChangePasswordRequest(BaseModel):
@@ -216,3 +216,13 @@ class ChangeEmailResponse(BaseModel):
 
 class OkResponse(BaseModel):
     ok: bool
+
+
+# ===== Creators =====
+
+
+class CreatorProfileOut(BaseModel):
+    id: str
+    full_name: str
+    total_public_tracks: int
+    tracks: list[CommunityTrackOut]
