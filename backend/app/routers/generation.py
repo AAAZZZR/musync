@@ -1,7 +1,16 @@
-"""Generation jobs — 提交到 ACE、poll 結果、完成時落 DB + 上傳 Storage。"""
+"""Generation jobs — 提交到 ACE、poll 結果、完成時落 DB + 上傳 Storage。
 
+Throttling rules（詳見 .claude/coordination/generation-design.md）:
+
+- Single-pending：同 profile 同時間只能 1 個 status='pending' 的 job。
+- Rate limit：`plan='free'` 每 rolling 1 小時最多 10 個 job；`plan='pro'` 不擋。
+- Cancel：owner + pending only，把 status 改 failed 並記 completed_at。
+  ACE 1.5 上游沒有 cancel API，log warning 說明 GPU 任務會跑完但結果被丟棄。
+"""
+
+import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -16,7 +25,13 @@ from app.models import GenerationJob, Profile, Track
 from app.schemas import GenerationJobCreate, GenerationJobOut, TrackOut
 from app.storage import upload_ace_audio
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/generation", tags=["generation"])
+
+# Free plan rolling-window rate limit（詳見 generation-design.md §3）
+FREE_PLAN_HOURLY_LIMIT = 10
+RATE_LIMIT_WINDOW = timedelta(hours=1)
 
 
 def _job_to_out(job: GenerationJob, track: Track | None = None) -> GenerationJobOut:
@@ -36,6 +51,38 @@ async def create_job(
         raise HTTPException(status_code=503, detail="ACE API not configured")
 
     ensure_mood_supported(payload.mood)
+
+    # Rate limit（free plan only，rolling last 1 hour，any status 都算）
+    if profile.plan == "free":
+        cutoff = datetime.now(UTC) - RATE_LIMIT_WINDOW
+        recent = await session.scalar(
+            select(func.count())
+            .select_from(GenerationJob)
+            .where(
+                GenerationJob.profile_id == profile.id,
+                GenerationJob.created_at > cutoff,
+            )
+        )
+        if recent is not None and recent >= FREE_PLAN_HOURLY_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit: {FREE_PLAN_HOURLY_LIMIT} generations/hour on free plan",
+            )
+
+    # Single-pending：同時只能有 1 個 pending job
+    pending_count = await session.scalar(
+        select(func.count())
+        .select_from(GenerationJob)
+        .where(
+            GenerationJob.profile_id == profile.id,
+            GenerationJob.status == "pending",
+        )
+    )
+    if pending_count is not None and pending_count >= 1:
+        raise HTTPException(
+            status_code=429,
+            detail="Another generation is already in progress",
+        )
 
     # Track limit check
     current = await session.scalar(
@@ -124,6 +171,47 @@ async def get_job(
             await session.commit()
             await session.refresh(job)
 
+    return _job_to_out(job, track)
+
+
+@router.post("/jobs/{job_id}/cancel", response_model=GenerationJobOut)
+async def cancel_job(
+    job_id: str,
+    profile: Profile = Depends(get_current_profile),
+    session: AsyncSession = Depends(get_session),
+) -> GenerationJobOut:
+    """Cancel 一個 pending job。
+
+    ACE-Step 1.5 上游沒有 cancel API（詳見 generation-design.md §2），
+    所以這裡只改 DB 狀態：status→failed、completed_at=now。GPU 那邊會跑完但結果被忽略。
+    """
+    job = await session.get(GenerationJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Generation job not found")
+    if job.profile_id != profile.id:
+        raise HTTPException(status_code=403, detail="Not your generation job")
+    if job.status != "pending":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot cancel job with status={job.status}",
+        )
+
+    # ACE 1.5 沒 cancel endpoint — 只能 log，實際 GPU 任務會跑完
+    if job.ace_task_id:
+        logger.warning(
+            "Job %s cancelled client-side; ACE task %s will still complete on the GPU",
+            job.id,
+            job.ace_task_id,
+        )
+
+    job.status = "failed"
+    job.completed_at = datetime.now(UTC)
+    await session.commit()
+    await session.refresh(job)
+
+    track: Track | None = None
+    if job.track_id:
+        track = await session.get(Track, job.track_id)
     return _job_to_out(job, track)
 
 
