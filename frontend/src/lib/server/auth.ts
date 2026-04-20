@@ -1,38 +1,33 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
-import type { Profile } from "@prisma/client";
+import { ApiError, serverFetch } from "@/lib/server/api";
+import type { Profile } from "@/types/api";
 
-export async function getSupabaseUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+export async function hasSession(): Promise<boolean> {
+  const c = await cookies();
+  return !!c.get("mu_access")?.value;
 }
 
-export async function requireSupabaseUser() {
-  const user = await getSupabaseUser();
-  if (!user) redirect("/login");
-  return user;
+export async function requireSession(): Promise<void> {
+  if (!(await hasSession())) redirect("/login");
 }
 
 export async function getProfile(): Promise<Profile | null> {
-  const user = await getSupabaseUser();
-  if (!user) return null;
-  return prisma.profile.findUnique({ where: { userId: user.id } });
+  if (!(await hasSession())) return null;
+  try {
+    return await serverFetch<Profile>("/api/profile");
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 401 || e.status === 404)) return null;
+    throw e;
+  }
 }
 
 export async function requireProfile(): Promise<Profile> {
-  const user = await requireSupabaseUser();
-  const fullName = user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User";
-  return prisma.profile.upsert({
-    where: { userId: user.id },
-    update: {},
-    create: {
-      userId: user.id,
-      email: user.email!,
-      fullName,
-    },
-  });
+  await requireSession();
+  try {
+    return await serverFetch<Profile>("/api/profile");
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) redirect("/login");
+    throw e;
+  }
 }

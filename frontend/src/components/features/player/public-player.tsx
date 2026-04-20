@@ -7,7 +7,7 @@ import { usePlayerStore } from "@/lib/stores/player-store";
 import { getSeedTracksByMood } from "@/lib/server/actions/seed-tracks";
 import { Pause, Play, SkipForward, Volume2, Music } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import type { Mood, Track } from "@/types/api";
+import type { Mood } from "@/types/api";
 import Link from "next/link";
 
 export function PublicPlayer({

@@ -1,11 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requireProfile } from "@/lib/server/auth";
+import { asActionResult, serverFetch } from "@/lib/server/api";
 import { profileUpdateSchema } from "@/lib/validation/schemas";
-import type { ActionResult } from "@/types/api";
-import type { Profile } from "@prisma/client";
+import type { ActionResult, Profile } from "@/types/api";
 
 export async function updateProfileAction(
   _prev: unknown,
@@ -24,30 +22,15 @@ export async function updateProfileAction(
     };
   }
 
-  const current = await requireProfile();
-  try {
-    const profile = await prisma.profile.update({
-      where: { id: current.id },
-      data: {
-        ...(parsed.data.full_name !== undefined && { fullName: parsed.data.full_name }),
-        ...(parsed.data.preferred_mood !== undefined && {
-          preferredMood: parsed.data.preferred_mood,
-        }),
-        ...(parsed.data.daily_focus_minutes !== undefined && {
-          dailyFocusMinutes: parsed.data.daily_focus_minutes,
-        }),
-        ...(parsed.data.background_volume !== undefined && {
-          backgroundVolume: parsed.data.background_volume,
-        }),
-        ...(parsed.data.onboarding_complete !== undefined && {
-          onboardingComplete: parsed.data.onboarding_complete,
-        }),
-      },
-    });
+  const r = await asActionResult(() =>
+    serverFetch<Profile>("/api/profile", {
+      method: "PATCH",
+      body: JSON.stringify(parsed.data),
+    }),
+  );
+  if (r.ok) {
     revalidatePath("/app/settings");
     revalidatePath("/app/dashboard");
-    return { ok: true, data: profile };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Update failed" };
   }
+  return r;
 }

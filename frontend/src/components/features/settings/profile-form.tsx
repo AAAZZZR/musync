@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ import type { Mood, Profile } from "@/types/api";
 
 export function ProfileForm({ profile, moods }: { profile: Profile; moods: Mood[] }) {
   const [state, formAction, pending] = useActionState(updateProfileAction, null);
+  const [volume, setVolume] = useState(profile.background_volume);
 
   if (state?.ok) toast.success("Profile saved");
   else if (state && !state.ok && !state.fieldErrors) toast.error(state.error);
@@ -24,7 +26,7 @@ export function ProfileForm({ profile, moods }: { profile: Profile; moods: Mood[
   const fieldErrors = state && !state.ok ? state.fieldErrors : undefined;
 
   return (
-    <form action={formAction} className="grid max-w-lg gap-5">
+    <form action={formAction} className="grid max-w-xl gap-5">
       <div className="grid gap-2">
         <Label htmlFor="full_name">Name</Label>
         <Input id="full_name" name="full_name" defaultValue={profile.full_name} />
@@ -50,7 +52,7 @@ export function ProfileForm({ profile, moods }: { profile: Profile; moods: Mood[
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="daily_focus_minutes">Daily focus minutes</Label>
+        <Label htmlFor="daily_focus_minutes">Daily focus target (min)</Label>
         <Input
           id="daily_focus_minutes"
           name="daily_focus_minutes"
@@ -62,20 +64,24 @@ export function ProfileForm({ profile, moods }: { profile: Profile; moods: Mood[
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="background_volume">Background volume</Label>
-        <Input
+        <div className="flex items-center justify-between">
+          <Label htmlFor="background_volume">Background volume</Label>
+          <span className="text-xs text-muted-foreground">{volume}%</span>
+        </div>
+        <Slider
           id="background_volume"
-          name="background_volume"
-          type="number"
+          value={[volume]}
+          onValueChange={(v) => setVolume(v[0])}
           min={0}
           max={100}
-          defaultValue={profile.background_volume}
+          step={1}
         />
+        <input type="hidden" name="background_volume" value={volume} />
       </div>
 
       <input type="hidden" name="onboarding_complete" value="true" />
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "Saving..." : "Save preferences"}
       </Button>
     </form>

@@ -1,49 +1,22 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import type { Track } from "@/types/api";
+import { serverFetch } from "@/lib/server/api";
+import { seedToTrack } from "@/lib/tracks";
+import type { SeedTrack, Track } from "@/types/api";
 
 export async function getSeedTracksByMood(mood: string): Promise<Track[]> {
-  const seeds = await prisma.seedTrack.findMany({
-    where: { mood },
-    orderBy: { sortOrder: "asc" },
-  });
-
-  const apiBase = process.env.API_BASE_URL ?? "http://localhost:8000";
-
-  return seeds.map((s) => ({
-    id: s.id,
-    title: s.title,
-    mood: s.mood,
-    prompt: s.prompt,
-    stream_url: s.streamUrl.startsWith("http") ? s.streamUrl : `${apiBase}${s.streamUrl}`,
-    duration_sec: s.durationSec,
-    source: "seed",
-    created_at: new Date().toISOString(),
-  }));
+  const seeds = await serverFetch<SeedTrack[]>(
+    `/api/seed-tracks?mood=${encodeURIComponent(mood)}`,
+  );
+  return seeds.map(seedToTrack);
 }
 
 export async function getAllSeedTracks(): Promise<Record<string, Track[]>> {
-  const seeds = await prisma.seedTrack.findMany({
-    orderBy: [{ mood: "asc" }, { sortOrder: "asc" }],
-  });
-
-  const apiBase = process.env.API_BASE_URL ?? "http://localhost:8000";
+  const seeds = await serverFetch<SeedTrack[]>("/api/seed-tracks");
   const byMood: Record<string, Track[]> = {};
-
   for (const s of seeds) {
     if (!byMood[s.mood]) byMood[s.mood] = [];
-    byMood[s.mood].push({
-      id: s.id,
-      title: s.title,
-      mood: s.mood,
-      prompt: s.prompt,
-      stream_url: s.streamUrl.startsWith("http") ? s.streamUrl : `${apiBase}${s.streamUrl}`,
-      duration_sec: s.durationSec,
-      source: "seed",
-      created_at: new Date().toISOString(),
-    });
+    byMood[s.mood].push(seedToTrack(s));
   }
-
   return byMood;
 }

@@ -9,11 +9,22 @@ class Settings(BaseSettings):
     app_port: int = 8000
     cors_allow_origins: str = "http://localhost:3000"
 
-    supabase_jwt_secret: str = ""
+    database_url: str = ""
+
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_storage_bucket: str = "audio"
 
     ace_api_base_url: str = ""
     ace_api_key: str = ""
     ace_model: str = "acestep-v15-turbo"
+
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_id_pro: str = ""
+    stripe_pro_track_limit: int = 500
+
+    app_url: str = "http://localhost:3000"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, LayoutDashboard, Settings } from "lucide-react";
+import { Globe, Home, LayoutDashboard, Settings } from "lucide-react";
 import { SidebarNavItem } from "./sidebar-nav-item";
 import { UserMenu } from "./user-menu";
 
@@ -16,6 +16,7 @@ export function Sidebar({ email }: { email: string }) {
       <nav className="grid gap-1 px-2">
         <SidebarNavItem href="/" icon={Home} label="Player" />
         <SidebarNavItem href="/app/dashboard" icon={LayoutDashboard} label="Dashboard" />
+        <SidebarNavItem href="/app/community" icon={Globe} label="Community" />
         <SidebarNavItem href="/app/settings" icon={Settings} label="Settings" />
       </nav>
       <div className="mt-auto border-t p-2">

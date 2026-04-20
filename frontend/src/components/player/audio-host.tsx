@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { usePlayerStore } from "@/lib/stores/player-store";
 import { nextTrackAction } from "@/lib/server/actions/playback";
+import { getStreamUrlAction } from "@/lib/server/actions/stream";
+import { seedToTrack } from "@/lib/tracks";
 
 export function AudioHost() {
   const ref = useRef<HTMLAudioElement>(null);
@@ -11,11 +13,12 @@ export function AudioHost() {
   const volume = usePlayerStore((s) => s.volume);
   const playbackSessionId = usePlayerStore((s) => s.playbackSessionId);
   const queue = usePlayerStore((s) => s.queue);
+  const seekTargetSec = usePlayerStore((s) => s.seekTargetSec);
+  const loopCurrent = usePlayerStore((s) => s.loopCurrent);
 
-  // 用 ref 追蹤是否由使用者互動觸發
+  const [signedUrl, setSignedUrl] = useState<{ trackId: string; url: string } | null>(null);
   const userInteractedRef = useRef(false);
 
-  // 首次互動後標記
   useEffect(() => {
     function markInteracted() {
       userInteractedRef.current = true;
@@ -28,37 +31,96 @@ export function AudioHost() {
     };
   }, []);
 
+  // 當 currentTrack 切換到新 id 時，拉對應的 signed URL
+  useEffect(() => {
+    if (!currentTrack) return;
+    if (signedUrl?.trackId === currentTrack.id) return;
+
+    let cancelled = false;
+    const kind = currentTrack.source === "seed" ? "seed" : "track";
+    (async () => {
+      const r = await getStreamUrlAction(kind, currentTrack.id);
+      if (cancelled) return;
+      if (!r.ok) {
+        console.error("getStreamUrl failed:", r.error);
+        return;
+      }
+      setSignedUrl({ trackId: currentTrack.id, url: r.data.url });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTrack, signedUrl?.trackId]);
+
+  // 把 audio element 與 store 狀態同步
   useEffect(() => {
     const el = ref.current;
-    if (!el || !currentTrack) return;
+    if (!el) return;
 
-    if (el.src !== currentTrack.stream_url) {
-      el.src = currentTrack.stream_url;
+    if (!currentTrack) {
+      el.pause();
+      el.removeAttribute("src");
+      return;
     }
 
+    const url = signedUrl?.trackId === currentTrack.id ? signedUrl.url : null;
+    if (!url) return;
+
+    if (el.src !== url) el.src = url;
     el.volume = volume / 100;
 
     if (isPlaying) {
-      // 只在使用者已互動過後才嘗試 play
-      if (userInteractedRef.current) {
-        el.play().catch(() => {
-          // 如果還是被擋，靜默處理，使用者可以手動按 play
-        });
-      }
+      if (userInteractedRef.current) el.play().catch(() => {});
     } else {
       el.pause();
     }
-  }, [currentTrack, isPlaying, volume]);
+  }, [currentTrack, signedUrl, isPlaying, volume]);
+
+  // Seek target
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || seekTargetSec == null) return;
+    if (isFinite(seekTargetSec)) el.currentTime = seekTargetSec;
+    usePlayerStore.getState().clearSeek();
+  }, [seekTargetSec]);
+
+  // Time / duration 回寫 store
+  const handleTimeUpdate = useCallback(() => {
+    const el = ref.current;
+    if (el) usePlayerStore.getState().setProgress(el.currentTime);
+  }, []);
+
+  const handleLoadedMetadata = useCallback(() => {
+    const el = ref.current;
+    if (el && isFinite(el.duration)) {
+      usePlayerStore.getState().setDuration(el.duration);
+    }
+  }, []);
 
   const handleEnded = useCallback(async () => {
+    const el = ref.current;
+    if (loopCurrent && el) {
+      el.currentTime = 0;
+      el.play().catch(() => {});
+      return;
+    }
     if (queue.length > 0) {
       await usePlayerStore.getState().next();
       return;
     }
     if (!playbackSessionId) return;
     const result = await nextTrackAction(playbackSessionId);
-    if (result.ok) usePlayerStore.getState().playTrack(result.data.track);
-  }, [queue, playbackSessionId]);
+    if (result.ok) usePlayerStore.getState().playTrack(seedToTrack(result.data.track));
+  }, [queue, playbackSessionId, loopCurrent]);
 
-  return <audio ref={ref} onEnded={handleEnded} preload="auto" />;
+  return (
+    <audio
+      ref={ref}
+      onEnded={handleEnded}
+      onTimeUpdate={handleTimeUpdate}
+      onLoadedMetadata={handleLoadedMetadata}
+      preload="auto"
+    />
+  );
 }

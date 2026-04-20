@@ -1,45 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("next/navigation", () => ({
-  redirect: vi.fn((path: string) => {
-    throw new Error(`REDIRECT:${path}`);
-  }),
-}));
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(async () => ({
-    auth: {
-      getUser: vi.fn(async () => ({
-        data: { user: { id: "u1", email: "a@b.com", user_metadata: { full_name: "Test" } } },
-      })),
-      getSession: vi.fn(async () => ({
-        data: { session: { access_token: "fake-token" } },
-      })),
-    },
-  })),
-}));
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
-    profile: {
-      findUnique: vi.fn(async () => ({ id: "p1", userId: "u1", email: "a@b.com" })),
-    },
-    track: {
-      create: vi.fn(async (args: { data: Record<string, unknown> }) => ({
-        id: "t1",
-        title: args.data.title,
-        mood: args.data.mood,
-        prompt: args.data.prompt,
-        streamUrl: args.data.streamUrl,
-        durationSec: args.data.durationSec,
-        source: args.data.source,
-        createdAt: new Date(),
-      })),
-    },
-    generationJob: {
-      create: vi.fn(async () => ({ id: "j1" })),
-    },
-  },
-}));
 vi.mock("@/lib/server/api", () => ({
   serverFetch: vi.fn(),
   ApiError: class extends Error {
@@ -49,45 +10,35 @@ vi.mock("@/lib/server/api", () => ({
       this.status = status;
     }
   },
+  asActionResult: async <T>(fn: () => Promise<T>) => {
+    try {
+      return { ok: true as const, data: await fn() };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : "error" };
+    }
+  },
 }));
 
-import { createGenerationJobAction } from "@/lib/server/actions/generation";
+import {
+  createGenerationJobAction,
+  pollGenerationJobAction,
+} from "@/lib/server/actions/generation";
 import { serverFetch } from "@/lib/server/api";
-import { revalidatePath } from "next/cache";
 
 beforeEach(() => vi.clearAllMocks());
 
 describe("createGenerationJobAction", () => {
-  it("zod 失敗回 fieldErrors", async () => {
-    const r = await createGenerationJobAction({
-      mood: "x",
-      prompt: "",
-      duration_sec: 10,
-    });
+  it("zod 失敗", async () => {
+    const r = await createGenerationJobAction({ mood: "x", prompt: "", duration_sec: 10 });
     expect(r).toMatchObject({ ok: false });
   });
 
-  it("成功時 revalidate 並回 track", async () => {
+  it("成功 → POST /api/generation/jobs，回 jobId + durationSec", async () => {
     vi.mocked(serverFetch).mockResolvedValueOnce({
-      job_id: "j1",
-      mood: "focus",
-      prompt: "p",
-      prompt_normalized: "n",
-      model: "ace-1.5",
-      status: "completed",
+      id: "backend-job-1",
       duration_sec: 180,
-      created_at: "2026-01-01",
-      completed_at: "2026-01-01",
-      track: {
-        id: "t1",
-        title: "T",
-        mood: "focus",
-        prompt: "p",
-        stream_url: "u",
-        duration_sec: 180,
-        source: "ace-1.5",
-        created_at: "2026-01-01",
-      },
+      status: "pending",
+      track: null,
     });
     const r = await createGenerationJobAction({
       mood: "focus",
@@ -95,18 +46,58 @@ describe("createGenerationJobAction", () => {
       duration_sec: 180,
     });
     expect(r).toMatchObject({ ok: true });
-    if (r.ok) expect(r.data.track).not.toBeNull();
-    expect(revalidatePath).toHaveBeenCalledWith("/app/library");
-    expect(revalidatePath).toHaveBeenCalledWith("/app/dashboard");
+    if (r.ok) {
+      expect(r.data.jobId).toBe("backend-job-1");
+      expect(r.data.durationSec).toBe(180);
+    }
+    expect(serverFetch).toHaveBeenCalledWith(
+      "/api/generation/jobs",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
-  it("backend 失敗回 error", async () => {
+  it("backend 錯誤 → ok: false", async () => {
     vi.mocked(serverFetch).mockRejectedValueOnce(new Error("Provider down"));
-    const r = await createGenerationJobAction({
-      mood: "focus",
-      prompt: "lofi",
-      duration_sec: 180,
-    });
+    const r = await createGenerationJobAction({ mood: "focus", prompt: "x", duration_sec: 180 });
     expect(r).toMatchObject({ ok: false, error: "Provider down" });
+  });
+});
+
+describe("pollGenerationJobAction", () => {
+  it("pending → 回 pending", async () => {
+    vi.mocked(serverFetch).mockResolvedValueOnce({ status: "pending", track: null });
+    const r = await pollGenerationJobAction("job-1");
+    expect(r).toMatchObject({ ok: true });
+    if (r.ok) expect(r.data.status).toBe("pending");
+  });
+
+  it("completed → 回 track", async () => {
+    vi.mocked(serverFetch).mockResolvedValueOnce({
+      status: "completed",
+      track: {
+        id: "t1",
+        title: "T",
+        mood: "focus",
+        prompt: "p",
+        storage_path: "users/u1/t1.mp3",
+        duration_sec: 180,
+        source: "ace-1.5",
+        is_public: false,
+        published_at: null,
+        created_at: "2026-01-01",
+      },
+    });
+    const r = await pollGenerationJobAction("job-1");
+    expect(r).toMatchObject({ ok: true });
+    if (r.ok) {
+      expect(r.data.status).toBe("completed");
+      expect(r.data.track?.storage_path).toBe("users/u1/t1.mp3");
+    }
+  });
+
+  it("backend error → 回 ok: false", async () => {
+    vi.mocked(serverFetch).mockRejectedValueOnce(new Error("404"));
+    const r = await pollGenerationJobAction("job-1");
+    expect(r).toMatchObject({ ok: false });
   });
 });

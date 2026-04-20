@@ -26,6 +26,7 @@ vi.mock("@/lib/server/actions/playback", () => ({
   startPlaybackAction: vi.fn(async () => ({ ok: true, data: { session_id: "ps1", track: {} } })),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock("@/lib/stores/player-store", () => ({
   usePlayerStore: { getState: () => ({ playTrack: vi.fn(), setPlaybackSession: vi.fn() }) },
 }));

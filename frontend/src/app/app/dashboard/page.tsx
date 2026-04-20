@@ -5,61 +5,73 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/features/empty-state";
 import { TrackCard } from "@/components/player/track-card";
-import { prisma } from "@/lib/prisma";
+import { ComposerForm } from "@/components/features/composer/composer-form";
+import { FocusSessionTimer } from "@/components/features/sessions/focus-session-timer";
+import { MOODS } from "@/lib/constants/moods";
 import { requireProfile } from "@/lib/server/auth";
+import { serverFetch } from "@/lib/server/api";
+import type { FocusSession, Track } from "@/types/api";
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
   const [sessions, tracks] = await Promise.all([
-    prisma.focusSession.findMany({
-      where: { profileId: profile.id },
-      orderBy: { startedAt: "desc" },
-      take: 10,
-    }),
-    prisma.track.findMany({
-      where: { profileId: profile.id },
-      orderBy: { createdAt: "desc" },
-    }),
+    serverFetch<FocusSession[]>("/api/focus-sessions?limit=10"),
+    serverFetch<Track[]>("/api/tracks"),
   ]);
 
   const active = sessions.find((s) => s.status === "active");
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayMin = sessions
-    .filter((s) => s.status === "completed" && s.completedAt?.toISOString().startsWith(todayStr))
-    .reduce((acc, s) => acc + s.durationMinutes, 0);
+    .filter((s) => s.status === "completed" && s.completed_at?.startsWith(todayStr))
+    .reduce((acc, s) => acc + s.duration_minutes, 0);
 
   return (
     <div className="grid gap-8">
-      {/* Overview */}
       <div>
-        <h1 className="font-serif text-2xl font-semibold">Welcome back, {profile.fullName}</h1>
+        <h1 className="font-serif text-2xl font-semibold">Welcome back, {profile.full_name}</h1>
         <p className="text-sm text-muted-foreground">
-          Today: {todayMin} / {profile.dailyFocusMinutes} focus minutes
+          Today: {todayMin} / {profile.daily_focus_minutes} focus minutes
         </p>
       </div>
 
+      {active && (
+        <FocusSessionTimer
+          sessionId={active.id}
+          title={active.title}
+          mood={active.mood}
+          startedAt={active.started_at}
+          durationMinutes={active.duration_minutes}
+        />
+      )}
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-5">
-          <h2 className="text-sm font-medium text-muted-foreground">Active session</h2>
-          {active ? (
-            <p className="mt-2 font-medium">
-              {active.title} &middot; {active.durationMinutes} min
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-muted-foreground">No active session</p>
-          )}
-        </Card>
-        <Card className="p-5">
-          <h2 className="text-sm font-medium text-muted-foreground">Library</h2>
-          <p className="mt-2 text-2xl font-semibold">{tracks.length} tracks</p>
+          <h2 className="text-sm font-medium text-muted-foreground">Tracks</h2>
+          <p className="mt-2 text-2xl font-semibold">{tracks.length}</p>
         </Card>
         <Card className="p-5">
           <h2 className="text-sm font-medium text-muted-foreground">Sessions</h2>
-          <p className="mt-2 text-2xl font-semibold">{sessions.length} total</p>
+          <p className="mt-2 text-2xl font-semibold">{sessions.length}</p>
+        </Card>
+        <Card className="p-5">
+          <h2 className="text-sm font-medium text-muted-foreground">Plan</h2>
+          <p className="mt-2 text-2xl font-semibold capitalize">{profile.plan}</p>
+          <p className="text-xs text-muted-foreground">
+            {tracks.length} / {profile.track_limit} tracks used
+          </p>
         </Card>
       </div>
 
-      {/* Library section */}
+      <section>
+        <h2 className="font-serif text-xl font-semibold">Compose</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Generate a custom track or start a focus session.
+        </p>
+        <Card className="p-6">
+          <ComposerForm moods={MOODS} defaultMood={profile.preferred_mood} />
+        </Card>
+      </section>
+
       <section>
         <h2 className="font-serif text-xl font-semibold">Library</h2>
         <p className="mb-4 text-sm text-muted-foreground">Your generated tracks</p>
@@ -67,35 +79,22 @@ export default async function DashboardPage() {
           <EmptyState
             icon={<Music className="h-6 w-6" />}
             title="No tracks yet"
-            description="Generate your first track from the home page."
+            description="Use the composer above to generate your first track."
             action={
               <Link href="/">
-                <Button>Go to Player</Button>
+                <Button variant="outline">Browse moods</Button>
               </Link>
             }
           />
         ) : (
           <div className="grid gap-3">
             {tracks.map((t) => (
-              <TrackCard
-                key={t.id}
-                track={{
-                  id: t.id,
-                  title: t.title,
-                  mood: t.mood,
-                  prompt: t.prompt,
-                  stream_url: t.streamUrl,
-                  duration_sec: t.durationSec,
-                  source: t.source,
-                  created_at: t.createdAt.toISOString(),
-                }}
-              />
+              <TrackCard key={t.id} track={t} />
             ))}
           </div>
         )}
       </section>
 
-      {/* Sessions section */}
       <section>
         <h2 className="font-serif text-xl font-semibold">Focus Sessions</h2>
         <p className="mb-4 text-sm text-muted-foreground">Your session history</p>
@@ -108,11 +107,15 @@ export default async function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{s.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {s.mood} &middot; {s.durationMinutes} min &middot;{" "}
-                    {new Date(s.startedAt).toLocaleDateString()}
+                    {s.mood} &middot; {s.duration_minutes} min &middot;{" "}
+                    {new Date(s.started_at).toLocaleDateString()}
                   </p>
                 </div>
-                <Badge variant={s.status === "active" ? "default" : s.status === "completed" ? "secondary" : "outline"}>
+                <Badge
+                  variant={
+                    s.status === "active" ? "default" : s.status === "completed" ? "secondary" : "outline"
+                  }
+                >
                   {s.status}
                 </Badge>
               </Card>

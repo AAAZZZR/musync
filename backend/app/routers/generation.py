@@ -1,132 +1,149 @@
+"""Generation jobs — 提交到 ACE、poll 結果、完成時落 DB + 上傳 Storage。"""
+
+import uuid
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ace_client import poll_task, submit_task
 from app.core.config import get_settings
-from app.dependencies import get_current_user_id
-from app.domain import MOODS, now_iso
-from app.schemas import GenerationCreateRequest, GenerationJobOut
-from app.services import ensure_mood_supported, generate_job_id, generate_track_id, normalize_prompt
-from app.state import GENERATION_JOBS
+from app.core.db import get_session
+from app.dependencies import get_current_profile
+from app.domain import MOODS, ensure_mood_supported, normalize_prompt
+from app.models import GenerationJob, Profile, Track
+from app.schemas import GenerationJobCreate, GenerationJobOut, TrackOut
+from app.storage import upload_ace_audio
 
-settings = get_settings()
 router = APIRouter(prefix="/api/generation", tags=["generation"])
 
 
+def _job_to_out(job: GenerationJob, track: Track | None = None) -> GenerationJobOut:
+    out = GenerationJobOut.model_validate(job)
+    out.track = TrackOut.model_validate(track) if track else None
+    return out
+
+
 @router.post("/jobs", response_model=GenerationJobOut)
-async def create_generation_job(
-    payload: GenerationCreateRequest,
-    user_id: str = Depends(get_current_user_id),
+async def create_job(
+    payload: GenerationJobCreate,
+    profile: Profile = Depends(get_current_profile),
+    session: AsyncSession = Depends(get_session),
 ) -> GenerationJobOut:
+    settings = get_settings()
+    if not settings.ace_api_base_url:
+        raise HTTPException(status_code=503, detail="ACE API not configured")
+
     ensure_mood_supported(payload.mood)
-    prompt_normalized = normalize_prompt(payload.mood, payload.prompt)
-    title = payload.title or f"{MOODS[payload.mood]['label']} Flow"
-    job_id = generate_job_id()
-    created_at = now_iso()
 
-    # 如果 ACE API 有設定，走真實非同步生成
-    if settings.ace_api_base_url:
-        ace_task_id = await submit_task(
-            prompt=prompt_normalized,
-            duration_sec=payload.duration_sec,
+    # Track limit check
+    current = await session.scalar(
+        select(func.count()).select_from(Track).where(Track.profile_id == profile.id)
+    )
+    if current is not None and current >= profile.track_limit:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Track limit reached ({current}/{profile.track_limit})",
         )
-        job = {
-            "job_id": job_id,
-            "user_id": user_id,
-            "mood": payload.mood,
-            "prompt": payload.prompt,
-            "prompt_normalized": prompt_normalized,
-            "model": settings.ace_model,
-            "status": "pending",
-            "duration_sec": payload.duration_sec,
-            "created_at": created_at,
-            "completed_at": None,
-            "track": None,
-            "ace_task_id": ace_task_id,
-            "title": title,
-        }
-    else:
-        # Mock 模式：直接回 completed（開發用）
-        track_id = generate_track_id()
-        track = {
-            "id": track_id,
-            "title": title,
-            "mood": payload.mood,
-            "prompt": payload.prompt,
-            "stream_url": "https://samplelib.com/lib/preview/mp3/sample-3s.mp3",
-            "duration_sec": payload.duration_sec,
-            "source": settings.ace_model,
-            "created_at": created_at,
-        }
-        job = {
-            "job_id": job_id,
-            "user_id": user_id,
-            "mood": payload.mood,
-            "prompt": payload.prompt,
-            "prompt_normalized": prompt_normalized,
-            "model": settings.ace_model,
-            "status": "completed",
-            "duration_sec": payload.duration_sec,
-            "created_at": created_at,
-            "completed_at": created_at,
-            "track": track,
-            "ace_task_id": None,
-            "title": title,
-        }
 
-    GENERATION_JOBS[job_id] = job
-    return GenerationJobOut(**job)
+    prompt_normalized = normalize_prompt(payload.mood, payload.prompt)
+    ace_task_id = await submit_task(prompt=prompt_normalized, duration_sec=payload.duration_sec)
+
+    job = GenerationJob(
+        profile_id=profile.id,
+        mood=payload.mood,
+        prompt=payload.prompt,
+        prompt_normalized=prompt_normalized,
+        model=settings.ace_model,
+        status="pending",
+        duration_sec=payload.duration_sec,
+        provider_job_id=None,  # 直接用 job.id；frontend poll 用 job.id
+        ace_task_id=ace_task_id,
+    )
+    # 順便把 title 藏在 prompt_normalized 旁邊？沒地方放，先用 mood label 組
+    session.add(job)
+    await session.commit()
+    await session.refresh(job)
+
+    return _job_to_out(job)
 
 
 @router.get("/jobs/{job_id}", response_model=GenerationJobOut)
 async def get_job(
     job_id: str,
-    user_id: str = Depends(get_current_user_id),
+    profile: Profile = Depends(get_current_profile),
+    session: AsyncSession = Depends(get_session),
 ) -> GenerationJobOut:
-    job = GENERATION_JOBS.get(job_id)
-    if not job or job["user_id"] != user_id:
+    settings = get_settings()
+    job = await session.get(GenerationJob, job_id)
+    if not job or job.profile_id != profile.id:
         raise HTTPException(status_code=404, detail="Generation job not found")
 
-    # 如果 pending 且有 ace_task_id，去 ACE 問狀態
-    if job["status"] == "pending" and job.get("ace_task_id"):
-        result = await poll_task(job["ace_task_id"])
+    track: Track | None = None
+    if job.track_id:
+        track = await session.get(Track, job.track_id)
+
+    # pending + 有 ace_task_id → 去 ACE 問狀態
+    if job.status == "pending" and job.ace_task_id:
+        result = await poll_task(job.ace_task_id)
 
         if result["status"] == 1:
-            # 成功 — 建 track
-            # audio_path 格式: /v1/audio?path=%2Fworkspace%2F...
-            # 轉成 /api/audio?path=<decoded_path> 讓前端透過 backend proxy 拿
-            raw_path = result.get("audio_path", "")
-            if raw_path.startswith("/v1/audio?path="):
-                from urllib.parse import unquote
-                file_path = unquote(raw_path.replace("/v1/audio?path=", ""))
-                audio_url = f"/api/audio?path={file_path}"
-            else:
-                audio_url = raw_path
-            track_id = generate_track_id()
-            job["status"] = "completed"
-            job["completed_at"] = now_iso()
-            job["track"] = {
-                "id": track_id,
-                "title": job["title"],
-                "mood": job["mood"],
-                "prompt": job["prompt"],
-                "stream_url": audio_url,
-                "duration_sec": job["duration_sec"],
-                "source": settings.ace_model,
-                "created_at": job["created_at"],
-            }
-        elif result["status"] == 2:
-            # 失敗
-            job["status"] = "failed"
-            job["completed_at"] = now_iso()
+            raw_path = result.get("audio_path") or ""
+            track_id = str(uuid.uuid4())
+            storage_path = f"users/{profile.user_id}/{track_id}.mp3"
+            try:
+                await upload_ace_audio(raw_path, storage_path)
+            except Exception as e:
+                job.status = "failed"
+                job.completed_at = datetime.now(UTC)
+                await session.commit()
+                raise HTTPException(status_code=502, detail=f"Upload failed: {e}")
 
-    return GenerationJobOut(**job)
+            title = f"{MOODS.get(job.mood, {}).get('label', job.mood)} Flow"
+            track = Track(
+                id=track_id,
+                profile_id=profile.id,
+                title=title,
+                mood=job.mood,
+                prompt=job.prompt,
+                storage_path=storage_path,
+                duration_sec=job.duration_sec,
+                source=settings.ace_model,
+            )
+            session.add(track)
+            job.status = "completed"
+            job.track_id = track_id
+            job.completed_at = datetime.now(UTC)
+            await session.commit()
+            await session.refresh(job)
+            await session.refresh(track)
+        elif result["status"] == 2:
+            job.status = "failed"
+            job.completed_at = datetime.now(UTC)
+            await session.commit()
+            await session.refresh(job)
+
+    return _job_to_out(job, track)
 
 
 @router.get("/jobs", response_model=list[GenerationJobOut])
 async def list_jobs(
     limit: int = Query(default=20, ge=1, le=100),
-    user_id: str = Depends(get_current_user_id),
+    profile: Profile = Depends(get_current_profile),
+    session: AsyncSession = Depends(get_session),
 ) -> list[GenerationJobOut]:
-    user_jobs = [job for job in GENERATION_JOBS.values() if job["user_id"] == user_id]
-    user_jobs.sort(key=lambda j: j["created_at"], reverse=True)
-    return [GenerationJobOut(**job) for job in user_jobs[:limit]]
+    stmt = (
+        select(GenerationJob)
+        .where(GenerationJob.profile_id == profile.id)
+        .order_by(GenerationJob.created_at.desc())
+        .limit(limit)
+    )
+    jobs = list(await session.scalars(stmt))
+    track_ids = [j.track_id for j in jobs if j.track_id]
+    tracks_map: dict[str, Track] = {}
+    if track_ids:
+        rows = await session.scalars(select(Track).where(Track.id.in_(track_ids)))
+        for t in rows:
+            tracks_map[t.id] = t
+    return [_job_to_out(j, tracks_map.get(j.track_id or "")) for j in jobs]
