@@ -6,12 +6,25 @@ import logging
 from secrets import token_urlsafe
 from urllib.parse import quote
 
-from fastapi import APIRouter, Cookie, HTTPException, Header, Request
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Header, Request
 from fastapi.responses import RedirectResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import supabase_auth
 from app.core.config import get_settings
-from app.schemas import AuthSessionOut, LoginRequest, RefreshRequest, SignupRequest
+from app.core.db import get_session
+from app.dependencies import get_current_profile
+from app.models import Profile
+from app.schemas import (
+    AuthSessionOut,
+    ChangeEmailRequest,
+    ChangeEmailResponse,
+    ChangePasswordRequest,
+    LoginRequest,
+    OkResponse,
+    RefreshRequest,
+    SignupRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +82,14 @@ def _pkce_pair() -> tuple[str, str]:
 
 @router.post("/signup", response_model=AuthSessionOut)
 async def signup(payload: SignupRequest) -> AuthSessionOut:
-    data = await supabase_auth.sign_up(payload.email, payload.password, payload.full_name)
+    if payload.tos_accepted is not True:
+        raise HTTPException(status_code=400, detail="You must accept the Terms of Service")
+    data = await supabase_auth.sign_up(
+        payload.email,
+        payload.password,
+        payload.full_name,
+        metadata={"tos_accepted": True},
+    )
     return _session_out(data)
 
 
@@ -91,6 +111,36 @@ async def logout(authorization: str | None = Header(default=None)) -> dict:
         token = authorization.removeprefix("Bearer ").strip()
         await supabase_auth.sign_out(token)
     return {"ok": True}
+
+
+@router.post("/change-password", response_model=OkResponse)
+async def change_password(
+    payload: ChangePasswordRequest,
+    profile: Profile = Depends(get_current_profile),
+) -> OkResponse:
+    ok = await supabase_auth.verify_password(profile.email, payload.current_password)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Current password incorrect")
+    await supabase_auth.admin_update_user(profile.user_id, {"password": payload.new_password})
+    return OkResponse(ok=True)
+
+
+@router.post("/change-email", response_model=ChangeEmailResponse)
+async def change_email(
+    payload: ChangeEmailRequest,
+    profile: Profile = Depends(get_current_profile),
+    session: AsyncSession = Depends(get_session),
+) -> ChangeEmailResponse:
+    new_email = payload.new_email.strip().lower()
+    if "@" not in new_email or len(new_email) < 3:
+        raise HTTPException(status_code=400, detail="Invalid email")
+    await supabase_auth.admin_update_user(
+        profile.user_id,
+        {"email": new_email, "email_confirm": True},
+    )
+    profile.email = new_email
+    await session.commit()
+    return ChangeEmailResponse(ok=True, email=new_email)
 
 
 @router.get("/oauth/{provider}")
