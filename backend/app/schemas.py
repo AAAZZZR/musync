@@ -112,9 +112,12 @@ class FocusSessionOut(_Out):
     mood: str
     duration_minutes: int
     prompt: str
-    status: str
+    status: str  # active | paused | completed | abandoned
     started_at: datetime
     completed_at: datetime | None = None
+    paused_at: datetime | None = None
+    total_paused_seconds: int = 0
+    abandoned_at: datetime | None = None
 
 
 class FocusSessionCreate(BaseModel):
