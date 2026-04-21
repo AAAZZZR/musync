@@ -3,6 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ProfileForm } from "@/components/features/settings/profile-form";
 import { BillingPanel } from "@/components/features/settings/billing-panel";
+import { ChangePasswordForm } from "@/components/features/settings/change-password-form";
+import { ChangeEmailForm } from "@/components/features/settings/change-email-form";
+import { DeleteAccountPanel } from "@/components/features/settings/delete-account-panel";
 import { MOODS } from "@/lib/constants/moods";
 import { requireProfile } from "@/lib/server/auth";
 import { serverFetch } from "@/lib/server/api";
@@ -59,6 +62,46 @@ export default async function SettingsPage() {
         <h2 className="font-serif text-lg font-semibold">Profile</h2>
         <Card className="p-6">
           <ProfileForm profile={profile} moods={MOODS} />
+        </Card>
+      </section>
+
+      <section className="grid gap-3">
+        <h2 className="font-serif text-lg font-semibold">Security</h2>
+        <Card className="grid gap-6 p-6">
+          <div className="grid gap-3">
+            <div>
+              <h3 className="font-medium">Change password</h3>
+              <p className="text-xs text-muted-foreground">
+                You&apos;ll be signed out of other devices after this takes effect.
+              </p>
+            </div>
+            <ChangePasswordForm />
+          </div>
+          <Separator />
+          <div className="grid gap-3">
+            <div>
+              <h3 className="font-medium">Change email</h3>
+              <p className="text-xs text-muted-foreground">
+                Current: <span className="font-mono">{profile.email}</span>
+              </p>
+            </div>
+            <ChangeEmailForm currentEmail={profile.email} />
+          </div>
+        </Card>
+      </section>
+
+      <section className="grid gap-3">
+        <h2 className="font-serif text-lg font-semibold text-destructive">Danger zone</h2>
+        <Card className="grid gap-3 border-destructive/40 p-6">
+          <div>
+            <h3 className="font-medium">Delete account</h3>
+            <p className="text-xs text-muted-foreground">
+              Remove your profile and all associated tracks, sessions, and data permanently.
+            </p>
+          </div>
+          <div>
+            <DeleteAccountPanel email={profile.email} />
+          </div>
         </Card>
       </section>
     </div>

@@ -3,6 +3,7 @@ import type { FocusSessionStatus } from "@/types/api";
 
 const variants: Record<FocusSessionStatus, "default" | "secondary" | "outline"> = {
   active: "default",
+  paused: "secondary",
   completed: "secondary",
   abandoned: "outline",
 };

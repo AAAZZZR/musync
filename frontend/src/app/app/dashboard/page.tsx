@@ -19,7 +19,7 @@ export default async function DashboardPage() {
     serverFetch<Track[]>("/api/tracks"),
   ]);
 
-  const active = sessions.find((s) => s.status === "active");
+  const active = sessions.find((s) => s.status === "active" || s.status === "paused");
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayMin = sessions
     .filter((s) => s.status === "completed" && s.completed_at?.startsWith(todayStr))
@@ -39,8 +39,11 @@ export default async function DashboardPage() {
           sessionId={active.id}
           title={active.title}
           mood={active.mood}
+          status={active.status as "active" | "paused"}
           startedAt={active.started_at}
           durationMinutes={active.duration_minutes}
+          pausedAt={active.paused_at ?? null}
+          totalPausedSeconds={active.total_paused_seconds ?? 0}
         />
       )}
 

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MoodPicker } from "./mood-picker";
 import {
+  cancelGenerationJobAction,
   createGenerationJobAction,
   pollGenerationJobAction,
 } from "@/lib/server/actions/generation";
@@ -111,7 +112,7 @@ export function ComposerForm({ moods, defaultMood }: { moods: Mood[]; defaultMoo
         title,
       });
       if (!r.ok) {
-        toast.error(r.error);
+        showGenerationError(r.error);
         return;
       }
       setProgress(0);
@@ -121,6 +122,21 @@ export function ComposerForm({ moods, defaultMood }: { moods: Mood[]; defaultMoo
         startedAt: Date.now(),
         estimatedMs: r.data.durationSec * ESTIMATE_RATIO * 1000,
       });
+    });
+  }
+
+  function handleCancel() {
+    if (gen.kind !== "generating") return;
+    const jobId = gen.jobId;
+    startTransition(async () => {
+      const r = await cancelGenerationJobAction(jobId);
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast("Generation cancelled");
+      setGen({ kind: "idle" });
+      setProgress(0);
     });
   }
 
@@ -162,6 +178,18 @@ export function ComposerForm({ moods, defaultMood }: { moods: Mood[]; defaultMoo
   }
 
   const generating = gen.kind === "generating";
+
+  function showGenerationError(detail: string) {
+    if (detail.includes("Another generation is already in progress")) {
+      toast.error("A generation is already running — wait for it to finish or cancel.");
+    } else if (detail.toLowerCase().includes("rate limit")) {
+      toast.error(detail + ". Upgrade to Pro for unlimited generations.");
+    } else if (detail.toLowerCase().includes("track limit")) {
+      toast.error(detail + ". Upgrade to Pro or delete some tracks.");
+    } else {
+      toast.error(detail);
+    }
+  }
 
   return (
     <div className="grid gap-6">
@@ -215,6 +243,11 @@ export function ComposerForm({ moods, defaultMood }: { moods: Mood[]; defaultMoo
         <Button onClick={handleGenerate} disabled={pending || generating}>
           {generating ? "Generating…" : "Generate music"}
         </Button>
+        {generating && (
+          <Button variant="outline" onClick={handleCancel} disabled={pending}>
+            Cancel generation
+          </Button>
+        )}
         <Button variant="outline" onClick={handleStartSession} disabled={pending || generating}>
           Start focus session
         </Button>

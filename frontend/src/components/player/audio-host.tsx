@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import { toast } from "sonner";
 import { usePlayerStore } from "@/lib/stores/player-store";
 import { nextTrackAction } from "@/lib/server/actions/playback";
 import { getStreamUrlAction } from "@/lib/server/actions/stream";
@@ -43,6 +44,12 @@ export function AudioHost() {
       if (cancelled) return;
       if (!r.ok) {
         console.error("getStreamUrl failed:", r.error);
+        if (r.error.toLowerCase().includes("exceeds your plan")) {
+          toast.error("This track needs a Pro plan to play — upgrade in Settings → Billing.");
+        } else {
+          toast.error(`Cannot play: ${r.error}`);
+        }
+        usePlayerStore.getState().stop();
         return;
       }
       setSignedUrl({ trackId: currentTrack.id, url: r.data.url });

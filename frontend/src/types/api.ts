@@ -20,6 +20,13 @@ export type Track = {
 
 export type CommunityTrack = Track & { creator: string };
 
+export type CreatorProfile = {
+  id: string;
+  full_name: string;
+  total_public_tracks: number;
+  tracks: CommunityTrack[];
+};
+
 export type SeedTrack = {
   id: string;
   mood: string;
@@ -51,7 +58,7 @@ export type Profile = {
   created_at: string;
 };
 
-export type FocusSessionStatus = "active" | "completed" | "abandoned";
+export type FocusSessionStatus = "active" | "paused" | "completed" | "abandoned";
 
 export type FocusSession = {
   id: string;
@@ -63,6 +70,9 @@ export type FocusSession = {
   status: FocusSessionStatus;
   started_at: string;
   completed_at: string | null;
+  paused_at: string | null;
+  total_paused_seconds: number;
+  abandoned_at: string | null;
 };
 
 export type GenerationJob = {

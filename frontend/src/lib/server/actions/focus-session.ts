@@ -35,3 +35,36 @@ export async function completeFocusSessionAction(
   if (r.ok) revalidatePath("/app/dashboard");
   return r;
 }
+
+export async function pauseFocusSessionAction(
+  sessionId: string,
+): Promise<ActionResult<FocusSession>> {
+  if (!sessionId) return { ok: false, error: "Missing session id" };
+  const r = await asActionResult(() =>
+    serverFetch<FocusSession>(`/api/focus-sessions/${sessionId}/pause`, { method: "POST" }),
+  );
+  if (r.ok) revalidatePath("/app/dashboard");
+  return r;
+}
+
+export async function resumeFocusSessionAction(
+  sessionId: string,
+): Promise<ActionResult<FocusSession>> {
+  if (!sessionId) return { ok: false, error: "Missing session id" };
+  const r = await asActionResult(() =>
+    serverFetch<FocusSession>(`/api/focus-sessions/${sessionId}/resume`, { method: "POST" }),
+  );
+  if (r.ok) revalidatePath("/app/dashboard");
+  return r;
+}
+
+export async function abandonFocusSessionAction(
+  sessionId: string,
+): Promise<ActionResult<FocusSession>> {
+  if (!sessionId) return { ok: false, error: "Missing session id" };
+  const r = await asActionResult(() =>
+    serverFetch<FocusSession>(`/api/focus-sessions/${sessionId}/abandon`, { method: "POST" }),
+  );
+  if (r.ok) revalidatePath("/app/dashboard");
+  return r;
+}

@@ -42,3 +42,15 @@ export async function pollGenerationJobAction(
     },
   };
 }
+
+export async function cancelGenerationJobAction(
+  jobId: string,
+): Promise<ActionResult<{ id: string }>> {
+  if (!jobId) return { ok: false, error: "Missing job id" };
+  const r = await asActionResult(() =>
+    serverFetch<GenerationJob>(`/api/generation/jobs/${jobId}/cancel`, { method: "POST" }),
+  );
+  if (!r.ok) return r;
+  revalidatePath("/app/dashboard");
+  return { ok: true, data: { id: r.data.id } };
+}

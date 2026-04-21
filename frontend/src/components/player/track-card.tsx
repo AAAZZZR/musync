@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Globe, Lock, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -73,7 +74,17 @@ export function TrackCard({
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{track.title}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {creator ? `${creator} · ` : ""}
+          {creator ? (
+            <>
+              <Link
+                href={`/app/creators/${track.profile_id}`}
+                className="hover:text-foreground hover:underline"
+              >
+                {creator}
+              </Link>{" "}
+              ·{" "}
+            </>
+          ) : null}
           {track.prompt}
         </p>
       </div>

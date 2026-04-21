@@ -3,7 +3,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ActionResult } from "@/types/api";
-import { loginSchema, signupSchema } from "@/lib/validation/schemas";
+import { asActionResult, serverFetch } from "@/lib/server/api";
+import {
+  changeEmailSchema,
+  changePasswordSchema,
+  loginSchema,
+  signupSchema,
+} from "@/lib/validation/schemas";
 
 const API_BASE = process.env.API_BASE_URL ?? "http://localhost:8000";
 const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
@@ -99,6 +105,54 @@ export async function logoutAction(): Promise<ActionResult<null>> {
       cache: "no-store",
     }).catch(() => {});
   }
+  await clearSessionCookies();
+  redirect("/");
+}
+
+export async function changePasswordAction(
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionResult<null>> {
+  const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { ok: false, error: "Invalid input", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+  const r = await asActionResult(() =>
+    serverFetch<{ ok: boolean }>("/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: parsed.data.current_password,
+        new_password: parsed.data.new_password,
+      }),
+    }),
+  );
+  if (!r.ok) return r;
+  return { ok: true, data: null };
+}
+
+export async function changeEmailAction(
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionResult<{ email: string }>> {
+  const parsed = changeEmailSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { ok: false, error: "Invalid input", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+  const r = await asActionResult(() =>
+    serverFetch<{ ok: boolean; email: string }>("/api/auth/change-email", {
+      method: "POST",
+      body: JSON.stringify(parsed.data),
+    }),
+  );
+  if (!r.ok) return r;
+  return { ok: true, data: { email: r.data.email } };
+}
+
+export async function deleteAccountAction(): Promise<ActionResult<null>> {
+  const r = await asActionResult(() =>
+    serverFetch<{ ok: boolean }>("/api/profile", { method: "DELETE" }),
+  );
+  if (!r.ok) return r;
   await clearSessionCookies();
   redirect("/");
 }
