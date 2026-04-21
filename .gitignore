@@ -1,14 +1,17 @@
 # Node
-frontend/node_modules
-frontend/.next
+node_modules
+.next
+*.tsbuildinfo
 
 # Python
-backend/.venv
+.venv
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # OS
 .DS_Store
+Thumbs.db
 
 # Claude Code local settings
 .claude/
@@ -19,6 +22,6 @@ __pycache__/
 !.env.example
 
 # Tests
-frontend/playwright-report/
-frontend/test-results/
-backend/.pytest_cache/
+playwright-report/
+test-results/
+coverage/
